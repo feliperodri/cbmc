@@ -1,7 +1,11 @@
+#include <assert.h>
+
 int z;
 
 int foo(int *x) __CPROVER_assigns(z)
-  __CPROVER_ensures(__CPROVER_return_value == *x + 5)
+  __CPROVER_ensures(__CPROVER_return_value == *x + 5);
+
+int foo(int *x)
 {
   *x = *x + 0;
   return *x + 5;

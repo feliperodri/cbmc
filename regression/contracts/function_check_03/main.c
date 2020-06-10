@@ -5,10 +5,12 @@
 // This currently fails because side-effect checking in loop invariants is
 // incorrect.
 
+void initialize(int *arr, int len) __CPROVER_ensures(__CPROVER_forall {
+  int i;
+  (0 <= i && i < len) == > arr[i] == i
+});
+
 void initialize(int *arr, int len)
-  __CPROVER_ensures(
-    __CPROVER_forall {int i; (0 <= i && i < len) ==> arr[i] == i}
-  )
 {
   for(int i = 0; i < len; i++)
     __CPROVER_loop_invariant(

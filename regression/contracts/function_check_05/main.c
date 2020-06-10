@@ -7,8 +7,9 @@
 
 #include <assert.h>
 
-int foo(int *x) 
-  __CPROVER_ensures(__CPROVER_return_value == 1)
+int foo(int *x) __CPROVER_ensures(__CPROVER_return_value == 1);
+
+int foo(int *x)
 {
   *x = 1;
   return 1;

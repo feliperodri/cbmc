@@ -3,7 +3,9 @@
 int y;
 double z;
 
-void bar(char **c) __CPROVER_assigns(y, z, **c) __CPROVER_ensures(**c == 6)
+void bar(char **c) __CPROVER_assigns(y, z, **c) __CPROVER_ensures(**c == 6);
+
+void bar(char **c)
 {
 }
 

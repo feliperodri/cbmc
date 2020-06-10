@@ -492,6 +492,10 @@ optionalt<exprt> size_of_expr(const typet &type, const namespacet &ns)
   {
     return from_integer(32/8, size_type());
   }
+  else if(type.id() == ID_empty)
+  {
+    return from_integer(0, size_type());
+  }
   else
     return {};
 }

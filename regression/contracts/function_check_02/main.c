@@ -4,10 +4,12 @@
 // A known bug (resolved in PR #2278) causes the use of quantifiers
 // in ensures to fail.
 
+int initialize(int *arr) __CPROVER_ensures(__CPROVER_forall {
+  int i;
+  (0 <= i && i < 10) == > arr[i] == i
+});
+
 int initialize(int *arr)
-  __CPROVER_ensures(
-    __CPROVER_forall {int i; (0 <= i && i < 10) ==> arr[i] == i}
-  )
 {
   for(int i = 0; i < 10; i++)
   {

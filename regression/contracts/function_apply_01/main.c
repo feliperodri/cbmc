@@ -6,7 +6,9 @@
 
 #include <assert.h>
 
-int foo() __CPROVER_ensures(__CPROVER_return_value == 0)
+int foo() __CPROVER_ensures(__CPROVER_return_value == 0);
+
+int foo()
 {
   return 1;
 }

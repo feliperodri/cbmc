@@ -824,6 +824,53 @@ inline multi_ary_exprt &to_multi_ary_expr(exprt &expr)
   return static_cast<multi_ary_exprt &>(expr);
 }
 
+/// \brief A base class for int-range expressions
+class int_range_exprt : public expr_protectedt
+{
+public:
+  int_range_exprt(const irep_idt &_id, operandst _operands, typet _type)
+    : expr_protectedt(_id, std::move(_type))
+  {
+    operands() = std::move(_operands);
+  }
+
+  exprt &op0()
+  {
+    return operands().front();
+  }
+
+  exprt &op1()
+  {
+    return operands()[1];
+  }
+
+  const exprt &op0() const
+  {
+    return operands().front();
+  }
+
+  const exprt &op1() const
+  {
+    return operands()[1];
+  }
+};
+
+/// \brief Cast an exprt to a \ref int_range_exprt
+///
+/// \a expr must be known to be \ref int_range_exprt.
+///
+/// \param expr: Source expression
+/// \return Object of type \ref int_range_exprt
+inline const int_range_exprt &to_int_range_exprt(const exprt &expr)
+{
+  return static_cast<const int_range_exprt &>(expr);
+}
+
+/// \copydoc int_range_exprt(const exprt &)
+inline int_range_exprt &to_int_range_exprt(exprt &expr)
+{
+  return static_cast<int_range_exprt &>(expr);
+}
 
 /// \brief The plus expression
 /// Associativity is not specified.

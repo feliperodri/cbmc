@@ -1,0 +1,9 @@
+CORE
+main.c
+--enforce-all-contracts
+^EXIT=10$
+^SIGNAL=0$
+^VERIFICATION FAILED$
+--
+--
+This test checks that verification fails whena function with an array assigns target calls a function which may assign above the allowable range.

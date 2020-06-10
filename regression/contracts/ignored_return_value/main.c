@@ -2,7 +2,9 @@
 
 int get_at_idx(int const *const arr, const size_t len, const size_t idx)
   __CPROVER_requires(__CPROVER_r_ok(arr, len) && idx < len)
-    __CPROVER_ensures(__CPROVER_return_value == arr[idx])
+    __CPROVER_ensures(__CPROVER_return_value == arr[idx]);
+
+int get_at_idx(int const *const arr, const size_t len, const size_t idx)
 {
   return arr[idx];
 }

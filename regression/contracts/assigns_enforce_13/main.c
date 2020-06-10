@@ -1,4 +1,8 @@
-void f1(int *x, int *y) __CPROVER_assigns(*y)
+#include <assert.h>
+
+void f1(int *x, int *y) __CPROVER_assigns(*y);
+
+void f1(int *x, int *y)
 {
   int *a = x;
   *a = 5;

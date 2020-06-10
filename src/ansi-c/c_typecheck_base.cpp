@@ -157,8 +157,50 @@ void c_typecheck_baset::typecheck_new_symbol(symbolt &symbol)
     else
     {
       // we don't need the identifiers
-      for(auto &parameter : to_code_type(symbol.type).parameters())
-        parameter.set_identifier(irep_idt());
+      code_typet &code_type = to_code_type(symbol.type);
+      unsigned anon_counter = 0;
+
+      // Add the parameter declarations into the symbol table.
+      for(auto &parameter : code_type.parameters())
+      {
+        std::string symbol_name = id2string(symbol.name);
+
+        // skip CPROVER primitive, builtin and atomic functions
+        if(
+          symbol_name.find("__CPROVER_") != std::string::npos ||
+          symbol_name.find("__builtin_") != std::string::npos ||
+          symbol_name.find("__atomic_") != std::string::npos)
+        {
+          parameter.set_identifier(irep_idt());
+        }
+        else
+        {
+          // may be anonymous
+          if(parameter.get_base_name().empty())
+          {
+            irep_idt base_name = "#anon" + std::to_string(anon_counter++);
+            parameter.set_base_name(base_name);
+          }
+
+          // produce identifier
+          irep_idt identifier =
+            symbol_name + "::" + id2string(parameter.get_base_name());
+          parameter.set_identifier(identifier);
+
+          parameter_symbolt parameter_symbol;
+          parameter_symbol.type = parameter.type();
+          parameter_symbol.name = identifier;
+          parameter_symbol.base_name = parameter.get_base_name();
+          parameter_symbol.location = parameter.source_location();
+
+          symbolt *new_parameter_symbol;
+
+          symbol.mode = mode;
+          symbol.module = module;
+
+          move_symbol(parameter_symbol, new_parameter_symbol);
+        }
+      }
     }
   }
   else if(!symbol.is_macro)
@@ -341,7 +383,6 @@ void c_typecheck_baset::typecheck_redefinition_non_type(
     }
 
     // do body
-
     if(new_symbol.value.is_not_nil())
     {
       if(old_symbol.value.is_not_nil())
@@ -379,6 +420,20 @@ void c_typecheck_baset::typecheck_redefinition_non_type(
           throw 0;
         }
       }
+      else if(old_ct.parameters().size() > 0) // previous declaration
+      {
+        // remove parameter declarations to avoid conflicts
+        for(const auto &old_parameter : old_ct.parameters())
+        {
+          const irep_idt &identifier = old_parameter.get_identifier();
+
+          symbol_tablet::symbolst::const_iterator parameter_symbol_it =
+            symbol_table.symbols.find(identifier);
+          if(parameter_symbol_it != symbol_table.symbols.end()) {
+            symbol_table.erase(parameter_symbol_it);
+          }
+        }
+      }
       else if(inlined)
       {
         // preserve "extern inline" properties
@@ -401,6 +456,29 @@ void c_typecheck_baset::typecheck_redefinition_non_type(
 
       // move body
       old_symbol.value.swap(new_symbol.value);
+
+      // copy contract over, if it exists
+      const code_typet &old_type = to_code_type(old_symbol.type);
+      exprt old_assigns =
+        static_cast<const exprt &>(old_type.find(ID_C_spec_assigns));
+      exprt old_requires =
+        static_cast<const exprt &>(old_type.find(ID_C_spec_requires));
+      exprt old_ensures =
+        static_cast<const exprt &>(old_type.find(ID_C_spec_ensures));
+      if(old_assigns.is_not_nil())
+      {
+        new_symbol.type.get_named_sub().add(
+          ID_C_spec_assigns, std::move(old_assigns));
+      }
+      if(old_requires.is_not_nil())
+      {
+        new_symbol.type.get_named_sub().add(
+          ID_C_spec_requires, std::move(old_requires));
+      }
+      if(old_ensures.is_not_nil())
+      {
+        new_symbol.type.move_to_named_sub(ID_C_spec_ensures, old_ensures);
+      }
 
       // overwrite type (because of parameter names)
       old_symbol.type=new_symbol.type;
@@ -729,12 +807,11 @@ void c_typecheck_baset::typecheck_declaration(
       declarator.set_name(identifier);
 
       // If the declarator is for a function definition, typecheck it.
+      typecheck_symbol(symbol);
       if(can_cast_type<code_typet>(declarator.type()))
       {
         typecheck_assigns(to_code_type(declarator.type()), contract);
       }
-
-      typecheck_symbol(symbol);
 
       // add code contract (if any); we typecheck this after the
       // function body done above, so as to have parameter symbols
@@ -754,15 +831,17 @@ void c_typecheck_baset::typecheck_declaration(
       typecheck_spec_expr(static_cast<codet &>(contract), ID_C_spec_ensures);
       parameter_map.clear();
 
-      irept assigns_to_add = contract.find(ID_C_spec_assigns);
-      if(assigns_to_add.is_not_nil())
-        new_symbol.type.add(ID_C_spec_assigns) = assigns_to_add;
-      irept requires_to_add = contract.find(ID_C_spec_requires);
-      if(requires_to_add.is_not_nil())
-        new_symbol.type.add(ID_C_spec_requires) = requires_to_add;
-      irept ensures_to_add = contract.find(ID_C_spec_ensures);
-      if(ensures_to_add.is_not_nil())
-        new_symbol.type.add(ID_C_spec_ensures) = ensures_to_add;
+
+
+      if(contract.find(ID_C_spec_assigns).is_not_nil())
+        new_symbol.type.add(ID_C_spec_assigns) =
+          contract.find(ID_C_spec_assigns);
+      if(contract.find(ID_C_spec_requires).is_not_nil())
+        new_symbol.type.add(ID_C_spec_requires) =
+          contract.find(ID_C_spec_requires);
+      if(contract.find(ID_C_spec_ensures).is_not_nil())
+        new_symbol.type.add(ID_C_spec_ensures) =
+          contract.find(ID_C_spec_ensures);
     }
   }
 }

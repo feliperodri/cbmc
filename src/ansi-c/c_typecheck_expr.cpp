@@ -491,10 +491,45 @@ void c_typecheck_baset::typecheck_expr_main(exprt &expr)
   {
     // already type checked
   }
+  else if(expr.id() == ID_int_range)
+  {
+    // already type checked
+    exprt &lower = to_int_range_exprt(expr).op0();
+    exprt &upper = to_int_range_exprt(expr).op1();
+
+    if(lower.id() == ID_constant || lower.id() == ID_identifier)
+    {
+      dstringt c_type = lower.type().get(ID_C_c_type);
+      if(c_type != ID_signed_int.c_str() && c_type != ID_unsigned_int.c_str())
+      {
+        error().source_location = expr.source_location();
+        error() << "Lower bound of range should be an integer, but got: "
+                << lower.type().pretty() << eom;
+        throw 0;
+      }
+    }
+
+    if(upper.id() == ID_constant || upper.id() == ID_identifier)
+    {
+      dstringt u_type = upper.type().get(ID_C_c_type);
+      if(u_type != ID_signed_int.c_str() && u_type != ID_unsigned_int.c_str())
+      {
+        error().source_location = expr.source_location();
+        error() << "Upper bound of range should be an integer, but got: "
+                << upper.pretty() << eom;
+        throw 0;
+      }
+    }
+  }
+  else if(expr.id() == ID_array_range)
+  {
+    // already type checked
+  }
   else
   {
     error().source_location = expr.source_location();
-    error() << "unexpected expression: " << expr.pretty() << eom;
+    error() << "expression categorized improperly during parsing: "
+            << expr.pretty() << eom;
     throw 0;
   }
 }
