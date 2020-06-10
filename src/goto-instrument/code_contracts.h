@@ -92,6 +92,9 @@ protected:
   /// \brief Enforce contract of a single function
   bool enforce_contract(const std::string &);
 
+  void
+  add_pointer_checks(const std::string &);
+
   void code_contracts(goto_functionst::goto_functiont &goto_function);
 
   /// \brief Does the named function have a contract?

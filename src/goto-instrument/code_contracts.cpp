@@ -12,6 +12,7 @@ Date: February 2016
 /// Verify and use annotated invariants and pre/post-conditions
 
 #include "code_contracts.h"
+#include "pointer_predicates.h"
 
 #include <util/expr_util.h>
 #include <util/fresh_symbol.h>
@@ -24,6 +25,8 @@ Date: February 2016
 #include <linking/static_lifetime_init.h>
 
 #include <util/message.h>
+
+#include <iostream>
 
 #include "loop_utils.h"
 
@@ -143,13 +146,49 @@ static void check_apply_invariants(
     loop_end->set_condition(boolean_negate(loop_end->get_condition()));
 }
 
+static void remove_local_parameters(
+  const code_typet::parameterst &params,
+  exprt &assigns)
+{
+  // Remove locally-scoped, non-reference targets from assigns clause.
+  if(assigns.is_not_nil() && assigns.has_operands())
+  {
+    for(code_typet::parameterst::const_iterator
+          p_it=params.begin();
+        p_it!=params.end();
+        ++p_it)
+    {
+      code_typet::parametert curr_param = *p_it;
+      bool match_found = false;
+      for(exprt::operandst::const_iterator
+            op_it = assigns.operands().begin();
+          !match_found && op_it != assigns.operands().end();
+          op_it++)
+      {
+        exprt curr_op = *op_it;
+        if(curr_op.id() != ID_symbol) { continue; }
+        symbol_exprt symbol_op = to_symbol_expr(curr_op);
+
+        if(strcmp(symbol_op.get_identifier().c_str(), curr_param.get_identifier().c_str()) == 0)
+        {
+          match_found = true;
+          assigns.operands().erase(op_it);
+        }
+      }
+    }
+  }
+}
+
 bool code_contractst::has_contract(const irep_idt fun_name)
 {
   const symbolt &f_sym = ns.lookup(fun_name);
   const code_typet &type = to_code_type(f_sym.type);
+  const exprt assigns =
+    static_cast<const exprt &>(type.find(ID_C_spec_assigns));
   const exprt ensures =
     static_cast<const exprt &>(type.find(ID_C_spec_ensures));
-  return ensures.is_not_nil();
+
+  return ensures.is_not_nil() || assigns.is_not_nil();
 }
 
 bool code_contractst::apply_contract(
@@ -167,13 +206,15 @@ bool code_contractst::apply_contract(
   const symbolt &f_sym=ns.lookup(function);
   const code_typet &type=to_code_type(f_sym.type);
 
+  exprt assigns =
+    static_cast<const exprt&>(type.find(ID_C_spec_assigns));
   exprt requires=
     static_cast<const exprt&>(type.find(ID_C_spec_requires));
   exprt ensures=
     static_cast<const exprt&>(type.find(ID_C_spec_ensures));
 
   // is there a contract?
-  if(ensures.is_nil())
+  if(ensures.is_nil() && assigns.is_nil())
     return false;
 
   replace_symbolt replace;
@@ -211,6 +252,9 @@ bool code_contractst::apply_contract(
     }
   }
 
+  // Remove locally-scoped, non-reference targets from assigns clause.
+  remove_local_parameters(type.parameters(), assigns);
+
   // Replace formal parameters
   code_function_callt::argumentst::const_iterator a_it=
     call.arguments().begin();
@@ -219,12 +263,15 @@ bool code_contractst::apply_contract(
       p_it!=type.parameters().end() &&
       a_it!=call.arguments().end();
       ++p_it, ++a_it)
+  {
     if(!p_it->get_identifier().empty())
     {
       symbol_exprt p(p_it->get_identifier(), p_it->type());
       replace.insert(p, *a_it);
     }
+  }
 
+  replace(assigns);
   replace(requires);
   replace(ensures);
 
@@ -235,6 +282,36 @@ bool code_contractst::apply_contract(
 
     goto_program.insert_before_swap(target, a);
     ++target;
+  }
+
+  // Create code to havoc the variables in the assigns clause
+  if(assigns.is_not_nil())
+  {
+    goto_programt assigns_havoc;
+    modifiest assigns_tgts;
+    if(assigns.has_operands())
+    {
+      exprt::operandst targets = assigns.operands();
+      for(exprt::operandst::const_iterator
+          op_it = targets.begin();
+          op_it != targets.end();
+          op_it++)
+      {
+        exprt curr_op = *op_it;
+        if(curr_op.id() == ID_symbol)
+        {
+          assigns_tgts.insert(curr_op);
+        }
+        else if (curr_op.id() == ID_dereference)
+        {
+          assigns_tgts.insert(curr_op);
+        }
+      }
+    }
+    build_havoc_code(target, assigns_tgts, assigns_havoc);
+    
+    goto_program.insert_before_swap(target, assigns_havoc);
+    std::advance(target, assigns_tgts.size());
   }
 
   // overwrite the function call
@@ -282,9 +359,117 @@ const symbolt &code_contractst::new_tmp_symbol(
     symbol_table);
 }
 
+void code_contractst::add_pointer_checks(const std::string &func_name)
+{
+  auto old_fun = goto_functions.function_map.find(func_name);
+  if(old_fun == goto_functions.function_map.end()){ return; }
+  goto_programt &program = old_fun->second.body;
+  if(program.instructions.empty()){ return; } // empty function body
+
+  const irep_idt func_id(func_name);
+
+  const symbolt &f_sym=ns.lookup(func_id);
+  const code_typet &type=to_code_type(f_sym.type);
+
+  exprt assigns = static_cast<const exprt&>(type.find(ID_C_spec_assigns));
+
+  // Return if there are no reference checks to perform.
+  if(assigns.is_nil() || !assigns.has_operands())
+    return;
+/*
+  // TODO: Create temporary variables to hold the assigns clause targets before they can be modified.
+  goto_programt standin_decls;
+  std::map<exprt::operandst, exprt> original_references;
+
+  exprt::operandst &targets = assigns.operands();
+  for(exprt::operandst::const_iterator
+        op_it = targets.begin();
+      op_it != targets.end();
+      op_it++)
+  {
+    exprt curr_op = *op_it;
+    if(curr_op.id() != ID_symbol) { continue; }
+
+    // Create an expression to capture the address of the operand
+    exprt op_addr = unary_exprt(ID_address_of, *op_it);
+
+    // Declare a new symbol to stand in for the reference
+    symbol_exprt symbol_op = to_symbol_expr(curr_op);
+
+    symbol_exprt standin = new_tmp_symbol(
+      op_addr.type(),
+      f_sym.location,
+      func_id,
+      f_sym.mode)
+      .symbol_expr();
+
+    standin_decls.add(goto_programt::make_decl(standin, f_sym.location));
+
+    // TODO: create an assignment to that symbol of the address expression
+    standin_decls.add(goto_programt::make_assignment(
+    code_assignt(std::move(standin), std::move(op_addr)),
+    f_sym.location));
+
+
+    // TODO: Add the assignment statement to the top of the function
+
+    // TODO: add a map entry from the original operand to the new symbol
+    original_references.insert(curr_op, standin);
+
+    if(curr_op.id() == ID_symbol)
+    {
+      assigns_tgts.insert(curr_op);
+    }
+    else if (curr_op.id() == ID_dereference)
+    {
+      assigns_tgts.insert(curr_op);
+    }
+  }
+  // TODO end
+  */
+
+  for(goto_programt::instructionst::iterator
+      it=program.instructions.begin();
+      it!=program.instructions.end(); it++)
+  {
+    if(it->is_assign())
+    {
+      bool first_iter = true;
+      exprt running = false_exprt();
+      for(exprt::operandst::const_iterator
+            op_it = assigns.operands().begin();
+          op_it != assigns.operands().end();
+          op_it++)
+      {
+        exprt leftPtr = unary_exprt(ID_address_of, it->get_assign().lhs());
+        exprt rightPtr = unary_exprt(ID_address_of, *op_it);
+        if(first_iter)
+        {
+          running = same_object(leftPtr, rightPtr);
+          first_iter = false;
+        }
+        else
+        {
+          exprt same = same_object(leftPtr, rightPtr);
+          running = binary_exprt(running, ID_or, same);
+        }
+      }
+
+      goto_programt alias_assertion;
+      alias_assertion.add(
+          goto_programt::make_assertion(running, it->source_location));
+      program.insert_before_swap(it, alias_assertion);
+      ++it;
+    }
+  }
+}
+
 bool code_contractst::enforce_contract(const std::string &fun_to_enforce)
 {
-  // Rename old function
+  // Add statements to the source function to ensure assigns clause is respected.
+  add_pointer_checks(fun_to_enforce);
+
+  // Rename source function
   std::stringstream ss;
   ss << CPROVER_PREFIX << "contracts_original_" << fun_to_enforce;
   const irep_idt mangled(ss.str());
@@ -298,6 +483,7 @@ bool code_contractst::enforce_contract(const std::string &fun_to_enforce)
                 << messaget::eom;
     return true;
   }
+
   std::swap(goto_functions.function_map[mangled], old_fun->second);
   goto_functions.function_map.erase(old_fun);
 
