@@ -807,3 +807,16 @@ void c_typecheck_baset::typecheck_spec_expr(
     implicit_typecast_bool(constraint);
   }
 }
+
+void c_typecheck_baset::typecheck_assigns(
+  codet &code,
+  const irep_idt &spec)
+{
+  if(code.find(spec).is_not_nil())
+  {
+    exprt &constraint=
+      static_cast<exprt&>(code.add(spec));
+
+    typecheck_expr(constraint);
+  }
+}
