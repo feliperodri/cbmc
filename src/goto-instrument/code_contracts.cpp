@@ -17,7 +17,6 @@ Date: February 2016
 #include <algorithm>
 #include <cstring>
 #include <iostream>
-#include <unordered_set>
 
 #include <analyses/local_may_alias.h>
 
@@ -29,6 +28,7 @@ Date: February 2016
 #include <util/expr_util.h>
 #include <util/fresh_symbol.h>
 #include <util/message.h>
+#include <util/pointer_offset_size.h>
 #include <util/pointer_predicates.h>
 #include <util/replace_symbol.h>
 
@@ -262,20 +262,19 @@ bool code_contractst::apply_contract(
       exprt::operandst targets = assigns.operands();
       for(exprt curr_op : targets)
       {
-        if(curr_op.id() == ID_symbol)
-        {
-          assigns_tgts.insert(curr_op);
-        }
-        else if(curr_op.id() == ID_dereference)
+        if(curr_op.id() == ID_symbol ||
+           curr_op.id() == ID_dereference ||
+           curr_op.id() == ID_member ||
+           curr_op.id() == ID_ptrmember)
         {
           assigns_tgts.insert(curr_op);
         }
         else
         {
-          log.error()
-            << "Unable to apply assigns clause for expression of type '"
-            << curr_op.id() << "'; not enforcing assigns clause."
-            << messaget::eom;
+          log.error() << "Unable to apply assigns clause for expression of type '"
+                      << curr_op.id()
+                      << "'; not enforcing assigns clause."
+                      << messaget::eom;
           return true;
         }
       }
@@ -339,8 +338,7 @@ const symbolt &code_contractst::new_tmp_symbol(
     symbol_table);
 }
 
-exprt create_alias_expression(
-  const exprt &assigns,
+exprt code_contractst::create_alias_expression(
   const exprt &lhs,
   std::vector<exprt> &aliasable_references)
 {
@@ -348,38 +346,78 @@ exprt create_alias_expression(
   exprt running = false_exprt();
   for(auto aliasable : aliasable_references)
   {
-    exprt leftPtr = address_of_exprt{lhs};
-    exprt rightPtr = aliasable;
+    //exprt leftPtr = unary_exprt(ID_address_of, ins_it->get_assign().lhs()); // does not set pointer type
+    exprt left_ptr = exprt(ID_address_of, pointer_type(lhs.type()), {lhs});
+    exprt right_ptr = aliasable;
 
-    if(first_iter)
+    exprt same_objct = same_object(left_ptr, right_ptr);
+    exprt same_offset = equal_exprt(pointer_offset(left_ptr), pointer_offset(right_ptr));
+
+    auto left_size = size_of_expr(lhs.type(), ns);
+    auto right_size = size_of_expr(dereference_exprt(right_ptr).type(), ns);
+    if(left_size.has_value() && right_size.has_value())
     {
-      running = same_object(leftPtr, rightPtr);
-      first_iter = false;
+      if(std::strcmp(left_size.value().get(ID_value).c_str(), right_size.value().get(ID_value).c_str()) == 0)
+      {
+        const exprt &compatible = binary_exprt(same_objct, ID_and, same_offset);
+        if(first_iter)
+        {
+          running = compatible;
+          first_iter = false;
+        }
+        else
+        {
+          running = binary_exprt(running, ID_or, compatible);
+        }
+      }
     }
     else
     {
-      exprt same = same_object(leftPtr, rightPtr);
-      running = binary_exprt(running, ID_or, same);
+      const exprt &same_size = binary_exprt(object_size(left_ptr), ID_and, object_size(right_ptr));
+      const exprt &compatible = binary_exprt(binary_exprt(same_objct, ID_and, same_offset), ID_and, same_size);
+      if(first_iter)
+      {
+        running = compatible;
+        first_iter = false;
+      }
+      else
+      {
+        running = binary_exprt(running, ID_or, compatible);
+      }
     }
   }
 
   return running;
 }
 
-void code_contractst::populate_assigns_references(
+void code_contractst::populate_assigns_reference(
+  std::vector<exprt> targets,
   const symbolt &function_symbol,
   const irep_idt &function_id,
   goto_programt &created_decls,
   std::vector<exprt> &created_references)
 {
-  const code_typet &type = to_code_type(function_symbol.type);
-  exprt assigns = static_cast<const exprt &>(type.find(ID_C_spec_assigns));
-
-  exprt::operandst &targets = assigns.operands();
   for(exprt curr_op : targets)
   {
-    exprt op_addr = address_of_exprt{curr_op};
-    // exprt(ID_address_of, pointer_type(curr_op.type()), {curr_op});
+    if(curr_op.type().id() == ID_struct_tag)
+    {
+      const symbolt &struct_sym = ns.lookup(to_tag_type(curr_op.type()));
+
+      std::vector<exprt> component_members;
+      const struct_typet &struct_t = to_struct_type(struct_sym.type);
+      for(struct_union_typet::componentt comp : struct_t.components())
+      {
+        exprt curr_member = member_exprt(curr_op, comp);
+        component_members.push_back(curr_member);
+      }
+      if(component_members.size() > 0){
+        populate_assigns_reference(component_members, function_symbol, function_id, created_decls, created_references);
+      }
+    }
+
+    // Create an expression to capture the address of the operand
+    exprt op_addr =
+      exprt(ID_address_of, pointer_type(curr_op.type()), {curr_op});
 
     // Declare a new symbol to stand in for the reference
     symbol_exprt standin = new_tmp_symbol(
@@ -400,23 +438,37 @@ void code_contractst::populate_assigns_references(
   }
 }
 
+void code_contractst::populate_assigns_references(
+  const symbolt &f_sym,
+  const irep_idt &func_id,
+  goto_programt &created_decls,
+  std::vector<exprt> &created_references)
+{
+  const code_typet &type = to_code_type(f_sym.type);
+  exprt assigns = static_cast<const exprt &>(type.find(ID_C_spec_assigns));
+
+  populate_assigns_reference(assigns.operands(), f_sym, func_id, created_decls, created_references);
+}
+
 void code_contractst::instrument_assn_statement(
   goto_programt::instructionst::iterator &instruction_iterator,
   goto_programt &program,
   exprt &assigns,
   std::vector<exprt> &assigns_references,
-  std::set<exprt> &freely_assignable_exprs)
+  std::set<dstringt> &freely_assignable_symbols)
 {
   INVARIANT(
     instruction_iterator->is_assign(),
     "The first argument of instrument_assn_statement should always be"
     " an assignment");
   const exprt &lhs = instruction_iterator->get_assign().lhs();
-  if(freely_assignable_exprs.find(lhs) != freely_assignable_exprs.end())
+  if(lhs.id() == ID_symbol &&
+     freely_assignable_symbols.find(to_symbol_expr(lhs).get_identifier())
+     != freely_assignable_symbols.end())
   {
     return;
   }
-  exprt alias_expr = create_alias_expression(assigns, lhs, assigns_references);
+  exprt alias_expr = create_alias_expression(lhs, assigns_references);
 
   goto_programt alias_assertion;
   alias_assertion.add(goto_programt::make_assertion(
@@ -429,42 +481,69 @@ void code_contractst::instrument_call_statement(
   goto_programt::instructionst::iterator &instruction_iterator,
   goto_programt &program,
   exprt &assigns,
+  const irep_idt &func_id,
   std::vector<exprt> &aliasable_references,
-  std::set<exprt> &freely_assignable_exprs)
+  std::set<dstringt> &freely_assignable_symbols)
 {
   INVARIANT(
     instruction_iterator->is_function_call(),
     "The first argument of instrument_call_statement should always be "
     "a function call");
+  const symbolt &f_sym = ns.lookup(func_id);
+
   code_function_callt call = instruction_iterator->get_function_call();
   const irep_idt &called_name =
     to_symbol_expr(call.function()).get_identifier();
 
-  // Malloc allocates memory which is not part of the caller's memory
-  // frame, so we want to capture the newly-allocated memory and
-  // treat it as assignable.
-  if(called_name == "malloc")
+  if(std::strcmp(called_name.c_str(), "malloc") == 0)
   {
-    aliasable_references.push_back(call.lhs());
-
-    // Make the variable, where result of malloc is stored, freely assignable.
-    goto_programt::instructionst::iterator local_instruction_iterator =
-      instruction_iterator;
-    local_instruction_iterator++;
-    if(
-      local_instruction_iterator->is_assign() &&
-      local_instruction_iterator->get_assign().lhs().is_not_nil())
+    // Make freshly allocated memory assignable, if we can determine its type.
+    goto_programt::instructionst::iterator local_ins_it = instruction_iterator;
+    local_ins_it++;
+    if(local_ins_it->is_assign())
     {
-      freely_assignable_exprs.insert(
-        local_instruction_iterator->get_assign().lhs());
+      const exprt &rhs = local_ins_it->get_assign().rhs();
+      if(rhs.id() == ID_typecast)
+      {
+        typet cast_type = rhs.type();
+
+        // Declare a new symbol to captured the result of malloc after cast.
+        symbol_exprt cast_capture = new_tmp_symbol(
+          cast_type,
+          f_sym.location,
+          func_id,
+          f_sym.mode).symbol_expr();
+
+        goto_programt pointer_capture;
+        pointer_capture.add(goto_programt::make_decl(cast_capture, f_sym.location));
+        pointer_capture.add(goto_programt::instructiont(code_assignt(cast_capture, rhs), f_sym.location, ASSIGN, nil_exprt(), {}));
+
+        // Allow future assignment LHSs to alias the cast symbol, and any
+        // constituent subcomponents (as in structs).
+        std::vector<exprt> top_ptr;
+        top_ptr.push_back(dereference_exprt(cast_capture));
+        populate_assigns_reference(top_ptr, f_sym, func_id, pointer_capture, aliasable_references);
+
+        int lines_to_iterate = pointer_capture.instructions.size();
+        program.insert_before_swap(local_ins_it, pointer_capture);
+        std::advance(instruction_iterator, lines_to_iterate + 1);
+      }
+      else
+      {
+        log.error() << "Malloc is called but the result is not cast. "
+                    << "Excluding result from the assignable memory frame ."
+                    << messaget::eom;
+      }
     }
-    return; // assume malloc edits no currently-existing memory objects.
+    return; // assume malloc edits no pre-existing memory objects.
   }
 
-  if(call.lhs().is_not_nil())
+  if(call.lhs().is_not_nil() && call.lhs().id() == ID_symbol &&
+    freely_assignable_symbols.find(to_symbol_expr(call.lhs()).get_identifier())
+    == freely_assignable_symbols.end())
   {
     exprt alias_expr =
-      create_alias_expression(assigns, call.lhs(), aliasable_references);
+      create_alias_expression(call.lhs(), aliasable_references);
 
     goto_programt alias_assertion;
     alias_assertion.add(goto_programt::make_assertion(
@@ -533,14 +612,15 @@ void code_contractst::instrument_call_statement(
           called_op_it != called_assigns.operands().end();
           called_op_it++)
       {
-        if(
-          freely_assignable_exprs.find(*called_op_it) !=
-          freely_assignable_exprs.end())
+        if(called_op_it->id() == ID_symbol &&
+          freely_assignable_symbols.find(
+             to_symbol_expr(*called_op_it).get_identifier()) !=
+          freely_assignable_symbols.end())
         {
           continue;
         }
         exprt alias_expr =
-          create_alias_expression(assigns, *called_op_it, aliasable_references);
+          create_alias_expression(*called_op_it, aliasable_references);
 
         goto_programt alias_assertion;
         alias_assertion.add(goto_programt::make_assertion(
@@ -651,15 +731,16 @@ bool code_contractst::add_pointer_checks(const std::string &function_name)
     function_symbol, function_id, standin_decls, original_references);
 
   // Create a list of variables that are okay to assign.
-  std::set<exprt> freely_assignable_exprs;
+  std::set<dstringt> freely_assignable_symbols;
   for(code_typet::parametert param : type.parameters())
   {
-    freely_assignable_exprs.insert(param);
+    freely_assignable_symbols.insert(param.get_identifier());
   }
 
   int lines_to_iterate = standin_decls.instructions.size();
   program.insert_before_swap(instruction_iterator, standin_decls);
   std::advance(instruction_iterator, lines_to_iterate);
+  //program.compute_location_numbers(ins_it->location_number);
 
   if(check_for_looped_mallocs(program))
   {
@@ -672,25 +753,17 @@ bool code_contractst::add_pointer_checks(const std::string &function_name)
   {
     if(instruction_iterator->is_decl())
     {
-      freely_assignable_exprs.insert(instruction_iterator->get_decl().symbol());
+      freely_assignable_symbols.insert(instruction_iterator->get_decl().symbol().get_identifier());
     }
     else if(instruction_iterator->is_assign())
     {
-      instrument_assn_statement(
-        instruction_iterator,
-        program,
-        assigns,
-        original_references,
-        freely_assignable_exprs);
+      instrument_assn_statement(instruction_iterator, program, assigns,
+                                original_references, freely_assignable_symbols);
     }
     else if(instruction_iterator->is_function_call())
     {
-      instrument_call_statement(
-        instruction_iterator,
-        program,
-        assigns,
-        original_references,
-        freely_assignable_exprs);
+      instrument_call_statement(instruction_iterator, program, assigns, function_id,
+                                original_references, freely_assignable_symbols);
     }
   }
   return false;
@@ -735,6 +808,7 @@ bool code_contractst::enforce_contract(const std::string &fun_to_enforce)
     mangled_found.second,
     "There should be no existing function called " + ss.str() +
       " in the symbol table because that name is a mangled name");
+
 
   // Insert wrapper function into goto_functions
   auto nexist_old_function = goto_functions.function_map.find(original);

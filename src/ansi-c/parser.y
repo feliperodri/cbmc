@@ -283,7 +283,7 @@ extern char *yyansi_ctext;
 %}
 %%
 
-grammar: 
+grammar:
         translation_unit
         ;
 
@@ -470,7 +470,7 @@ offsetof_member_designator:
           mto($$, $2);
         }
         ;
-          
+
 quantifier_expression:
           TOK_FORALL compound_scope '{' declaration comma_expression '}'
         {
@@ -532,7 +532,7 @@ target_list:
         ;
 
 target:
-          identifier
+         member_target
         | '*' target
         {
           $$=$1;
@@ -541,8 +541,33 @@ target:
         }
         ;
 
+member_target:
+         primary_target
+        | member_target '.' member_name
+        {
+          $$=$2;
+          set($$, ID_member);
+          mto($$, $1);
+          parser_stack($$).set(ID_component_name, parser_stack($3).get(ID_C_base_name));
+        }
+        | member_target TOK_ARROW member_name
+        {
+          $$=$2;
+          set($$, ID_ptrmember);
+          mto($$, $1);
+          parser_stack($$).set(ID_component_name, parser_stack($3).get(ID_C_base_name));
+        }
+        ;
+
+primary_target:
+         identifier
+        | '(' target ')'
+        { $$ = $2; }
+        ;
+
+
 statement_expression: '(' compound_statement ')'
-        { 
+        {
           $$=$1;
           set($$, ID_side_effect);
           parser_stack($$).set(ID_statement, ID_statement_expression);
@@ -940,7 +965,7 @@ declaration:
         | declaring_list ';'
         | default_declaring_list ';'
         ;
-        
+
 static_assert_declaration:
           TOK_STATIC_ASSERT '(' assignment_expression ',' assignment_expression ')'
         {
@@ -1024,7 +1049,7 @@ declaring_list:
           post_declarator_attributes_opt
           {
             $2=merge($3, $2); // type attribute
-            
+
             // the symbol has to be visible during initialization
             init($$, ID_declaration);
             parser_stack($$).type().swap(parser_stack($1));
@@ -1040,7 +1065,7 @@ declaring_list:
           post_declarator_attributes_opt
           {
             $2=merge($3, $2);
-            
+
             // the symbol has to be visible during initialization
             init($$, ID_declaration);
             parser_stack($$).type().swap(parser_stack($1));
@@ -1522,7 +1547,7 @@ elaborated_type_name:
         | enum_name
         | array_of_construct
         ;
-        
+
 array_of_construct:
           TOK_ARRAY_OF '<' type_name '>'
         { $$=$1; stack_type($$).subtype().swap(parser_stack($2)); }
@@ -1643,7 +1668,7 @@ gcc_attribute_list:
         {
           $$=merge($1, $3);
         }
-        ;          
+        ;
 
 gcc_attribute_specifier:
           TOK_GCC_ATTRIBUTE '(' '(' gcc_attribute_list ')' ')'
@@ -1790,7 +1815,7 @@ member_identifier_declarator:
           $$=$1;
           if(parser_stack($2).is_not_nil())
             make_subtype($$, $2);
-          
+
           if(parser_stack($3).is_not_nil()) // type attribute
             $$=merge($3, $$);
         }
@@ -2535,10 +2560,10 @@ jump_statement:
 
 gcc_local_label_statement:
           TOK_GCC_LABEL gcc_local_label_list ';'
-        { 
+        {
           $$=$1;
           statement($$, ID_gcc_local_label);
-          
+
           // put these into the scope
           forall_operands(it, parser_stack($2))
           {
@@ -2567,7 +2592,7 @@ gcc_local_label_list:
           mto($$, $3);
         }
         ;
-        
+
 gcc_local_label: identifier_or_typedef_name
         ;
 
@@ -2904,13 +2929,13 @@ function_definition:
           $$=$1;
           ansi_c_declarationt &ansi_c_declaration=
             to_ansi_c_declaration(parser_stack($$));
-            
+
           assert(ansi_c_declaration.declarators().size()==1);
           ansi_c_declaration.add_initializer(parser_stack($5));
-          
+
           // Kill the scope that 'function_head' creates.
           PARSER.pop_scope();
-          
+
           // We are no longer in any function.
           PARSER.set_function(irep_idt());
         }
@@ -3271,7 +3296,7 @@ parameter_abstract_declarator:
 postfixing_abstract_declarator:
           parameter_postfixing_abstract_declarator
         /* The following two rules implement K&R headers! */
-        | '(' 
+        | '('
           ')'
           KnR_parameter_header
         {

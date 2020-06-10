@@ -6,4 +6,4 @@ main.c
 ^VERIFICATION FAILED$
 --
 --
-This test checks that verification fails if an expression outside the assigns clause is assigned within the function.
+--This test checks that verification fails if an expression outside the assigns clause is assigned within the function.

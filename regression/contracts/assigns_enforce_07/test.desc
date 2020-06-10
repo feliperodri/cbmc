@@ -6,4 +6,4 @@ main.c
 ^VERIFICATION FAILED$
 --
 --
-This test checks that verification fails when functions with assigns clauses are called within a loop and one of them does not obey its assigns clause.
+--This test checks that verification fails when functions with assigns clauses are called within a loop and one of them does not obey its assigns clause.

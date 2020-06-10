@@ -645,9 +645,9 @@ void c_typecheck_baset::typecheck_declaration(
     irept contract;
 
     {
-      exprt spec_assigns =
-        static_cast<const exprt &>(declaration.find(ID_C_spec_assigns));
-      contract.add(ID_C_spec_assigns).swap(spec_assigns);
+       exprt spec_assigns =
+         static_cast<const exprt&>(declaration.find(ID_C_spec_assigns));
+       contract.add(ID_C_spec_assigns).swap(spec_assigns);
 
       exprt spec_requires=
         static_cast<const exprt&>(declaration.find(ID_C_spec_requires));
@@ -741,8 +741,7 @@ void c_typecheck_baset::typecheck_declaration(
       // available
       symbolt &new_symbol = symbol_table.get_writeable_ref(identifier);
 
-      typecheck_assigns_exprs(
-        static_cast<codet &>(contract), ID_C_spec_assigns);
+      typecheck_assigns_exprs(static_cast<codet &>(contract), ID_C_spec_assigns);
       typecheck_spec_expr(static_cast<codet &>(contract), ID_C_spec_requires);
 
       typet ret_type = void_type();
