@@ -29,6 +29,7 @@ Date: February 2016
 #include <iostream>
 
 #include "loop_utils.h"
+#include "c_types.h"
 
 /// Predicate to be used with the exprt::visit() function. The function
 /// found_return_value() will return `true` iff this predicate is called on an
@@ -376,10 +377,12 @@ void code_contractst::add_pointer_checks(const std::string &func_name)
   // Return if there are no reference checks to perform.
   if(assigns.is_nil() || !assigns.has_operands())
     return;
-/*
-  // TODO: Create temporary variables to hold the assigns clause targets before they can be modified.
+
+  goto_programt::instructionst::iterator ins_it =program.instructions.begin();
+
+  // Create temporary variables to hold the assigns clause targets before they can be modified.
   goto_programt standin_decls;
-  std::map<exprt::operandst, exprt> original_references;
+  std::map<exprt, exprt> original_references;
 
   exprt::operandst &targets = assigns.operands();
   for(exprt::operandst::const_iterator
@@ -388,16 +391,15 @@ void code_contractst::add_pointer_checks(const std::string &func_name)
       op_it++)
   {
     exprt curr_op = *op_it;
-    if(curr_op.id() != ID_symbol) { continue; }
 
     // Create an expression to capture the address of the operand
-    exprt op_addr = unary_exprt(ID_address_of, *op_it);
+    // exprt op_addr = unary_exprt(ID_address_of, *op_it); // does not set pointer type
+    exprt op_addr = exprt(ID_address_of, pointer_type(op_it->type()), {*op_it});
 
     // Declare a new symbol to stand in for the reference
-    symbol_exprt symbol_op = to_symbol_expr(curr_op);
 
     symbol_exprt standin = new_tmp_symbol(
-      op_addr.type(),
+      pointer_type(op_it->type()),
       f_sym.location,
       func_id,
       f_sym.mode)
@@ -405,34 +407,24 @@ void code_contractst::add_pointer_checks(const std::string &func_name)
 
     standin_decls.add(goto_programt::make_decl(standin, f_sym.location));
 
-    // TODO: create an assignment to that symbol of the address expression
+    // Add an assignment to that symbol of the address expression
     standin_decls.add(goto_programt::make_assignment(
-    code_assignt(std::move(standin), std::move(op_addr)),
+    code_assignt(standin, std::move(op_addr)),
     f_sym.location));
 
+    // Add a map entry from the original operand to the new symbol
+    original_references[*op_it] = standin;
 
-    // TODO: Add the assignment statement to the top of the function
-
-    // TODO: add a map entry from the original operand to the new symbol
-    original_references.insert(curr_op, standin);
-
-    if(curr_op.id() == ID_symbol)
-    {
-      assigns_tgts.insert(curr_op);
-    }
-    else if (curr_op.id() == ID_dereference)
-    {
-      assigns_tgts.insert(curr_op);
-    }
   }
-  // TODO end
-  */
+  int lines_to_iterate = standin_decls.instructions.size();
+  program.insert_before_swap(ins_it, standin_decls);
 
-  for(goto_programt::instructionst::iterator
-      it=program.instructions.begin();
-      it!=program.instructions.end(); it++)
+  std::advance(ins_it, lines_to_iterate);
+
+  // Insert aliasing assertions
+  for(;ins_it!=program.instructions.end(); ins_it++)
   {
-    if(it->is_assign())
+    if(ins_it->is_assign())
     {
       bool first_iter = true;
       exprt running = false_exprt();
@@ -441,8 +433,10 @@ void code_contractst::add_pointer_checks(const std::string &func_name)
           op_it != assigns.operands().end();
           op_it++)
       {
-        exprt leftPtr = unary_exprt(ID_address_of, it->get_assign().lhs());
-        exprt rightPtr = unary_exprt(ID_address_of, *op_it);
+        //exprt leftPtr = unary_exprt(ID_address_of, ins_it->get_assign().lhs()); // does not set pointer type
+        exprt leftPtr = exprt(ID_address_of, pointer_type(ins_it->get_assign().lhs().type()), {ins_it->get_assign().lhs()});
+        exprt rightPtr = original_references[*op_it];
+
         if(first_iter)
         {
           running = same_object(leftPtr, rightPtr);
@@ -457,9 +451,9 @@ void code_contractst::add_pointer_checks(const std::string &func_name)
 
       goto_programt alias_assertion;
       alias_assertion.add(
-          goto_programt::make_assertion(running, it->source_location));
-      program.insert_before_swap(it, alias_assertion);
-      ++it;
+          goto_programt::make_assertion(running, ins_it->source_location));
+      program.insert_before_swap(ins_it, alias_assertion);
+      ++ins_it;
     }
   }
 }
