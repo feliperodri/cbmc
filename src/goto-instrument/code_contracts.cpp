@@ -316,7 +316,15 @@ bool code_contractst::apply_contract(
   }
 
   // overwrite the function call
-  *target = goto_programt::make_assumption(ensures, target->source_location);
+
+  if(ensures.is_not_nil())
+  {
+    *target = goto_programt::make_assumption(ensures, target->source_location);
+  }
+  else
+  {
+    *target = goto_programt::make_skip();
+  }
 
   summarized.insert(function);
   return false;
