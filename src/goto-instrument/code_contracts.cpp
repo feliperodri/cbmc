@@ -27,6 +27,8 @@ Date: February 2016
 #include <util/message.h>
 
 #include <iostream>
+#include <algorithm>
+#include <unordered_set>
 
 #include "loop_utils.h"
 #include "c_types.h"
@@ -368,6 +370,34 @@ const symbolt &code_contractst::new_tmp_symbol(
     symbol_table);
 }
 
+exprt create_alias_expression(const exprt &assigns, const exprt &lhs, std::map<exprt, exprt> &original_references)
+{
+  bool first_iter = true;
+  exprt running = false_exprt();
+  for(exprt::operandst::const_iterator
+        op_it = assigns.operands().begin();
+      op_it != assigns.operands().end();
+      op_it++)
+  {
+    //exprt leftPtr = unary_exprt(ID_address_of, ins_it->get_assign().lhs()); // does not set pointer type
+    exprt leftPtr = exprt(ID_address_of, pointer_type(lhs.type()), {lhs});
+    exprt rightPtr = original_references[*op_it];
+
+    if(first_iter)
+    {
+      running = same_object(leftPtr, rightPtr);
+      first_iter = false;
+    }
+    else
+    {
+      exprt same = same_object(leftPtr, rightPtr);
+      running = binary_exprt(running, ID_or, same);
+    }
+  }
+
+  return running;
+}
+
 void code_contractst::add_pointer_checks(const std::string &func_name)
 {
   auto old_fun = goto_functions.function_map.find(func_name);
@@ -383,10 +413,10 @@ void code_contractst::add_pointer_checks(const std::string &func_name)
   exprt assigns = static_cast<const exprt&>(type.find(ID_C_spec_assigns));
 
   // Return if there are no reference checks to perform.
-  if(assigns.is_nil() || !assigns.has_operands())
+  if(assigns.is_nil())
     return;
 
-  goto_programt::instructionst::iterator ins_it =program.instructions.begin();
+  goto_programt::instructionst::iterator ins_it = program.instructions.begin();
 
   // Create temporary variables to hold the assigns clause targets before they can be modified.
   goto_programt standin_decls;
@@ -424,44 +454,156 @@ void code_contractst::add_pointer_checks(const std::string &func_name)
     original_references[*op_it] = standin;
 
   }
+
+  std::set<exprt> freely_assignable_exprs;
+
+  for(code_typet::parameterst::const_iterator
+        p_it=type.parameters().begin();
+      p_it!=type.parameters().end();
+      ++p_it)
+  {
+    freely_assignable_exprs.insert(*p_it);
+  }
+
   int lines_to_iterate = standin_decls.instructions.size();
   program.insert_before_swap(ins_it, standin_decls);
-
   std::advance(ins_it, lines_to_iterate);
 
   // Insert aliasing assertions
   for(;ins_it!=program.instructions.end(); ins_it++)
   {
-    if(ins_it->is_assign())
+    if(ins_it->is_decl()){
+      freely_assignable_exprs.insert(ins_it->get_decl().symbol());
+    }
+    else if(ins_it->is_assign())
     {
-      bool first_iter = true;
-      exprt running = false_exprt();
-      for(exprt::operandst::const_iterator
-            op_it = assigns.operands().begin();
-          op_it != assigns.operands().end();
-          op_it++)
-      {
-        //exprt leftPtr = unary_exprt(ID_address_of, ins_it->get_assign().lhs()); // does not set pointer type
-        exprt leftPtr = exprt(ID_address_of, pointer_type(ins_it->get_assign().lhs().type()), {ins_it->get_assign().lhs()});
-        exprt rightPtr = original_references[*op_it];
-
-        if(first_iter)
-        {
-          running = same_object(leftPtr, rightPtr);
-          first_iter = false;
-        }
-        else
-        {
-          exprt same = same_object(leftPtr, rightPtr);
-          running = binary_exprt(running, ID_or, same);
-        }
+      const exprt& lhs = ins_it->get_assign().lhs();
+      if(freely_assignable_exprs.find(lhs) != freely_assignable_exprs.end()){
+        continue;
       }
+      exprt alias_expr = create_alias_expression(assigns, lhs, original_references);
 
       goto_programt alias_assertion;
       alias_assertion.add(
-          goto_programt::make_assertion(running, ins_it->source_location));
+          goto_programt::make_assertion(alias_expr, ins_it->source_location));
       program.insert_before_swap(ins_it, alias_assertion);
       ++ins_it;
+    }
+    else if(ins_it->is_function_call())
+    {
+      code_function_callt call = ins_it->get_function_call();
+
+      if(call.lhs().is_not_nil())
+      {
+        exprt alias_expr = create_alias_expression(assigns, call.lhs(), original_references);
+
+        goto_programt alias_assertion;
+        alias_assertion.add(
+          goto_programt::make_assertion(alias_expr, ins_it->source_location));
+        program.insert_before_swap(ins_it, alias_assertion);
+        ++ins_it;
+
+      }
+      if(call.function().id() == ID_symbol) // TODO we don't handle function pointers
+      {
+        const irep_idt &called_name =
+          to_symbol_expr(call.function()).get_identifier();
+
+        const symbolt &called_sym=ns.lookup(called_name);
+        const code_typet &called_type=to_code_type(called_sym.type);
+
+        auto called_func = goto_functions.function_map.find(called_name);
+        if(called_func == goto_functions.function_map.end())
+        {
+          log.error() << "Could not find function '" << called_name
+                      << "' in goto-program; not enforcing assigns clause."
+                      << messaget::eom;
+          continue;
+        }
+
+        exprt called_assigns = static_cast<const exprt&>(called_func->second.type.find(ID_C_spec_assigns));
+        if(called_assigns.is_nil()) // Called function has no assigns clause
+        {
+          // Fail if called function has no assigns clause.
+          log.error() << "No assigns specification found for function '" << called_name
+                      << "' in goto-program; not enforcing assigns clause."
+                      << messaget::eom;
+
+          // Create a false assertion, so the analysis will fail if this function is called.
+          goto_programt failing_assertion;
+          failing_assertion.add(
+            goto_programt::make_assertion(false_exprt(), ins_it->source_location));
+          program.insert_before_swap(ins_it, failing_assertion);
+          ++ins_it;
+
+          continue;
+          /*
+          auto syms = ns.get_symbol_table().symbols;
+          for(auto sym_it = syms.begin();
+              sym_it != syms.end();
+              sym_it++)
+          {
+            std::cout << "DEBUGOUT: symbolinspect " << sym_it->second.pretty_name << std::endl;
+          }
+
+          // TODO: add checking for side effects on globals
+
+          // Make sure the function has arguments
+          if(call.operands().size() < 3) { continue; }
+
+          exprt::operandst &call_args = call.arguments();
+          for(exprt::operandst::const_iterator
+                arg_it = call_args.begin();
+              arg_it != call_args.end();
+              arg_it++)
+          {
+            // TODO: iterate down through pointers-to-pointers which may be assigned
+            exprt alias_expr = create_alias_expression(assigns, *arg_it, original_references);
+
+            goto_programt alias_assertion;
+            alias_assertion.add(
+              goto_programt::make_assertion(alias_expr, ins_it->source_location));
+            program.insert_before_swap(ins_it, alias_assertion);
+            ++ins_it;
+          }*/
+        }
+        else // Called function has assigns clause
+        {
+          replace_symbolt replace;
+          // Replace formal parameters
+          code_function_callt::argumentst::const_iterator a_it = call.arguments().begin();
+          for(code_typet::parameterst::const_iterator
+                p_it=called_type.parameters().begin();
+              p_it!=called_type.parameters().end() &&
+              a_it!=call.arguments().end();
+              ++p_it, ++a_it)
+          {
+            if(!p_it->get_identifier().empty())
+            {
+              symbol_exprt p(p_it->get_identifier(), p_it->type());
+              replace.insert(p, *a_it);
+            }
+          }
+
+          replace(called_assigns);
+          for(exprt::operandst::const_iterator
+                called_op_it = called_assigns.operands().begin();
+              called_op_it != called_assigns.operands().end();
+              called_op_it++)
+          {
+            if(freely_assignable_exprs.find(*called_op_it) != freely_assignable_exprs.end()){
+              continue;
+            }
+            exprt alias_expr = create_alias_expression(assigns, *called_op_it, original_references);
+
+            goto_programt alias_assertion;
+            alias_assertion.add(
+              goto_programt::make_assertion(alias_expr, ins_it->source_location));
+            program.insert_before_swap(ins_it, alias_assertion);
+            ++ins_it;
+          }
+        }
+      }
     }
   }
 }
@@ -542,11 +684,13 @@ void code_contractst::add_contract_check(
 
   const goto_functionst::goto_functiont &gf=f_it->second;
 
+  const exprt &assigns=
+                 static_cast<const exprt&>(gf.type.find(ID_C_spec_assigns));
   const exprt &requires=
-    static_cast<const exprt&>(gf.type.find(ID_C_spec_requires));
+                 static_cast<const exprt&>(gf.type.find(ID_C_spec_requires));
   const exprt &ensures=
     static_cast<const exprt&>(gf.type.find(ID_C_spec_ensures));
-  assert(ensures.is_not_nil());
+  assert(ensures.is_not_nil() || assigns.is_not_nil());
 
   // build:
   // if(nondet)
@@ -631,8 +775,11 @@ void code_contractst::add_contract_check(
   replace(ensures_cond);
 
   // assert(ensures)
-  check.add(
-    goto_programt::make_assertion(ensures_cond, ensures.source_location()));
+  if(ensures.is_not_nil())
+  {
+    check.add(
+      goto_programt::make_assertion(ensures_cond, ensures.source_location()));
+  }
 
   // assume(false)
   check.add(
