@@ -537,35 +537,6 @@ void code_contractst::add_pointer_checks(const std::string &func_name)
           ++ins_it;
 
           continue;
-          /*
-          auto syms = ns.get_symbol_table().symbols;
-          for(auto sym_it = syms.begin();
-              sym_it != syms.end();
-              sym_it++)
-          {
-            std::cout << "DEBUGOUT: symbolinspect " << sym_it->second.pretty_name << std::endl;
-          }
-
-          // TODO: add checking for side effects on globals
-
-          // Make sure the function has arguments
-          if(call.operands().size() < 3) { continue; }
-
-          exprt::operandst &call_args = call.arguments();
-          for(exprt::operandst::const_iterator
-                arg_it = call_args.begin();
-              arg_it != call_args.end();
-              arg_it++)
-          {
-            // TODO: iterate down through pointers-to-pointers which may be assigned
-            exprt alias_expr = create_alias_expression(assigns, *arg_it, original_references);
-
-            goto_programt alias_assertion;
-            alias_assertion.add(
-              goto_programt::make_assertion(alias_expr, ins_it->source_location));
-            program.insert_before_swap(ins_it, alias_assertion);
-            ++ins_it;
-          }*/
         }
         else // Called function has assigns clause
         {
