@@ -6,4 +6,4 @@ main.c
 ^VERIFICATION SUCCESSFUL$
 --
 --
---This test checks that a variable outside the assigns clause is not havocked.
+This test checks that a variable outside the assigns clause is not havocked.

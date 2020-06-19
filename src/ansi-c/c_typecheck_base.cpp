@@ -749,13 +749,13 @@ void c_typecheck_baset::typecheck_declaration(
       parameter_map.clear();
 
       if(contract.find(ID_C_spec_assigns).is_not_nil())
-        new_symbol.type.add(ID_C_spec_assigns)=
+        new_symbol.type.add(ID_C_spec_assigns) =
           contract.find(ID_C_spec_assigns);
       if(contract.find(ID_C_spec_requires).is_not_nil())
-        new_symbol.type.add(ID_C_spec_requires)=
+        new_symbol.type.add(ID_C_spec_requires) =
           contract.find(ID_C_spec_requires);
       if(contract.find(ID_C_spec_ensures).is_not_nil())
-        new_symbol.type.add(ID_C_spec_ensures)=
+        new_symbol.type.add(ID_C_spec_ensures) =
           contract.find(ID_C_spec_ensures);
     }
   }

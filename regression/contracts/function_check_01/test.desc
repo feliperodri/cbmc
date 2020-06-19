@@ -6,4 +6,4 @@ main.c
 ^VERIFICATION SUCCESSFUL$
 --
 --
---replace_all_calls_with-contracts is the current name for the flag. This should be updated as the flag changes.
+--replace-all-calls-with-contracts is the current name for the flag. This should be updated as the flag changes.

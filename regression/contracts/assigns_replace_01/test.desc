@@ -6,4 +6,4 @@ main.c
 ^VERIFICATION FAILED$
 --
 --
---This test checks that a variable inside the assigns clause is havocked.
+This test checks that a variable inside the assigns clause is havocked.

@@ -6,4 +6,4 @@ main.c
 ^VERIFICATION FAILED$
 --
 --
---This test checks that verification failes when a function with an assigns clause calls another with an assigns clause that adds one too many dereferences.
+This test checks that verification failes when a function with an assigns clause calls another with an assigns clause that adds one too many dereferences.

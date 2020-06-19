@@ -6,4 +6,4 @@ main.c
 ^VERIFICATION SUCCESSFUL$
 --
 --
---This test checks that a havocked variable can be constrained by a function post-condition.
+This test checks that a havocked variable can be constrained by a function post-condition.

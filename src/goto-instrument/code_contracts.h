@@ -95,6 +95,43 @@ protected:
   void
   add_pointer_checks(const std::string &);
 
+  /// Inserts an assertion statement into program before the assignment ins_it, to
+  /// ensure that the left-hand-side of the assignment aliases some expression in
+  /// original_references, unless it is contained in freely_assignable_exprs.
+  void
+  instrument_assn_statement(
+    goto_programt::instructionst::iterator& ins_it,
+    goto_programt& program,
+    exprt& assigns,
+    std::map<exprt, exprt>& original_references,
+    std::set<exprt>& freely_assignable_exprs);
+
+
+  /// Inserts an assertion statement into program before the function call at
+  /// ins_it, to ensure that any memory which may be written by the call is
+  /// aliased by some expression in assigns_references,unless it is contained
+  /// in freely_assignable_exprs.
+  void
+  instrument_call_statement(
+    goto_programt::instructionst::iterator& ins_it,
+    goto_programt& program,
+    exprt& assigns,
+    std::map<exprt, exprt>& original_references,
+    std::set<exprt>& freely_assignable_exprs);
+
+  /// Creates a local variable declaration for each expression in the assigns
+  /// clause (of the function given by f_sym), and stores them in created_decls.
+  /// Then creates assignment statements to capture the memory addresses of each
+  /// expression in the assigns clause within the associated local variable,
+  /// populating a map created_references from the original expression to the
+  /// associated variable.
+  void
+  populate_assigns_references(
+    const symbolt &f_sym,
+    const irep_idt& func_id,
+    goto_programt& created_decls,
+    std::map<exprt, exprt>& created_references);
+
   void code_contracts(goto_functionst::goto_functiont &goto_function);
 
   /// \brief Does the named function have a contract?
