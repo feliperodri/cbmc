@@ -197,15 +197,19 @@ bool code_contractst::apply_contract(
 {
   const code_function_callt &call = target->get_function_call();
 
-  // we don't handle function pointers
+  // Return if the function is not named in the call; currently we don't handle
+  // function pointers.
+  // TODO: handle function pointers.
   if(call.function().id()!=ID_symbol)
     return false;
 
+  // Retrieve the function type, which is needed to extract the contract components.
   const irep_idt &function=
     to_symbol_expr(call.function()).get_identifier();
   const symbolt &f_sym=ns.lookup(function);
   const code_typet &type=to_code_type(f_sym.type);
 
+  // Isolate each component of the contract.
   exprt assigns =
     static_cast<const exprt&>(type.find(ID_C_spec_assigns));
   exprt requires=
@@ -213,25 +217,30 @@ bool code_contractst::apply_contract(
   exprt ensures=
     static_cast<const exprt&>(type.find(ID_C_spec_ensures));
 
-  // is there a contract?
+  // Check to see if the function  contract actually constrains its effect on
+  // the program state; if not, return.
   if(ensures.is_nil() && assigns.is_nil())
     return false;
 
+  // Create a replace_symbolt object, for replacing expressions in the callee
+  // with expressions from the call site (e.g. the return value).
   replace_symbolt replace;
-  // Replace return value
   if(type.return_type() != empty_typet())
   {
+    // Check whether the function's return value is not disregarded.
     if(call.lhs().is_not_nil())
     {
-      // foo() ensures that its return value is > 5. Then rewrite calls to foo:
+      // If so, have it replaced appropriately.
+      // For example, if foo() ensures that its return value is > 5, then
+      // rewrite calls to foo as follows:
       // x = foo() -> assume(__CPROVER_return_value > 5) -> assume(x > 5)
       symbol_exprt ret_val(CPROVER_PREFIX "return_value", call.lhs().type());
       replace.insert(ret_val, call.lhs());
     }
     else
     {
-      // Function does have a return value, but call is not being assigned to
-      // anything so we can't use the trick above.
+      // If the function does return a value, but the return value is
+      // disregarded, check if the postcondition includes the return value.
       return_value_visitort v;
       ensures.visit(v);
       if(v.found_return_value())
@@ -271,10 +280,12 @@ bool code_contractst::apply_contract(
     }
   }
 
+  // Replace expressions in the contract components.
   replace(assigns);
   replace(requires);
   replace(ensures);
 
+  // Insert assertion of the precondition immediately before the call site.
   if(requires.is_not_nil())
   {
     goto_programt::instructiont a =
@@ -284,7 +295,8 @@ bool code_contractst::apply_contract(
     ++target;
   }
 
-  // Create code to havoc the variables in the assigns clause
+  // Create a series of non-deterministic assignments to havoc the variables
+  // in the assigns clause.
   if(assigns.is_not_nil())
   {
     goto_programt assigns_havoc;
@@ -301,16 +313,25 @@ bool code_contractst::apply_contract(
         else if(curr_op.id() == ID_dereference)
         {
           assigns_tgts.insert(curr_op);
+        } else {
+          log.error() << "Unable to apply assigns clause for expression of type '"
+                      << curr_op.id()
+                      << "'; not enforcing assigns clause."
+                      << messaget::eom;
+          return true;
         }
       }
     }
     build_havoc_code(target, assigns_tgts, assigns_havoc);
-    
+
+    // Insert the non-deterministic assignment immediately before the call site.
     goto_program.insert_before_swap(target, assigns_havoc);
     std::advance(target, assigns_tgts.size());
   }
 
-  // overwrite the function call
+  // To remove the function call, replace it with an assumption statement
+  // assuming the postcondition, if there is one. Otherwise, replace the
+  // function call with a SKIP statement.
   if(ensures.is_not_nil())
   {
     *target = goto_programt::make_assumption(ensures, target->source_location);
@@ -320,6 +341,7 @@ bool code_contractst::apply_contract(
     *target = goto_programt::make_skip();
   }
 
+  // Add this function to the set of replaced functions.
   summarized.insert(function);
   return false;
 }
@@ -365,7 +387,7 @@ const symbolt &code_contractst::new_tmp_symbol(
 exprt create_alias_expression(
   const exprt &assigns,
   const exprt &lhs,
-  std::map<exprt, exprt> &original_references)
+  std::map<exprt, exprt> &aliasable_references)
 {
   bool first_iter = true;
   exprt running = false_exprt();
@@ -375,7 +397,7 @@ exprt create_alias_expression(
   {
     //exprt leftPtr = unary_exprt(ID_address_of, ins_it->get_assign().lhs()); // does not set pointer type
     exprt leftPtr = exprt(ID_address_of, pointer_type(lhs.type()), {lhs});
-    exprt rightPtr = original_references[*op_it];
+    exprt rightPtr = aliasable_references[*op_it];
 
     if(first_iter)
     {
@@ -464,6 +486,13 @@ void code_contractst::instrument_call_statement(
     "The first argument of instrument_call_statement should always be "
     "a function call");
   code_function_callt call = ins_it->get_function_call();
+  const irep_idt &called_name =
+    to_symbol_expr(call.function()).get_identifier();
+
+  if(std::strcmp(called_name.c_str(), "malloc") == 0){
+    std::cout << "DEBUGOUT: Encountered MALLOC! " << call.pretty() << std::endl;
+    return; // assume malloc edits no currently-existing memory objects.
+  }
 
   if(call.lhs().is_not_nil())
   {
@@ -480,9 +509,6 @@ void code_contractst::instrument_call_statement(
   // TODO we don't handle function pointers
   if(call.function().id() == ID_symbol)
   {
-    const irep_idt &called_name =
-      to_symbol_expr(call.function()).get_identifier();
-
     const symbolt &called_sym = ns.lookup(called_name);
     const code_typet &called_type = to_code_type(called_sym.type);
 
@@ -795,8 +821,12 @@ void code_contractst::add_contract_check(
   }
 
   // assume(false)
-  check.add(
-    goto_programt::make_assumption(false_exprt(), ensures.source_location()));
+  // check.add(
+  //  goto_programt::make_assumption(false_exprt(), ensures.source_location()));
+
+  // TODO: Create a return statement for the temporary variable
+  //code_returnt ret(call.lhs());
+  //check.add(goto_programt::make_return(ret, ensures.source_location()));
 
   // prepend the new code to dest
   check.destructive_append(tmp_skip);
