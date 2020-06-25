@@ -623,7 +623,8 @@ void code_contractst::add_pointer_checks(const std::string &func_name)
   }
 
   int lines_to_iterate = standin_decls.instructions.size();
-  program.insert_before_swap(ins_it, standin_decls);
+  // program.insert_before_swap(ins_it, standin_decls);
+  program.destructive_insert(ins_it, standin_decls);
   std::advance(ins_it, lines_to_iterate);
 
   // Insert aliasing assertions
