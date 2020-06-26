@@ -473,6 +473,7 @@ void c_typecheck_baset::typecheck_expr_main(exprt &expr)
   else if(expr.id()==ID_C_spec_assigns ||
           expr.id()==ID_target_list)
   {
+    // already type checked
   }
   else
   {

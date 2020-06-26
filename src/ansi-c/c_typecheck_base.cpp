@@ -729,6 +729,12 @@ void c_typecheck_baset::typecheck_declaration(
       irep_idt identifier=symbol.name;
       declarator.set_name(identifier);
 
+      // If the declarator is for a function definition, typecheck it.
+      if(can_cast_type<code_typet>(declarator.type()))
+      {
+        typecheck_assigns(to_code_type(declarator.type()), contract);
+      }
+
       typecheck_symbol(symbol);
 
       // add code contract (if any); we typecheck this after the
@@ -736,7 +742,6 @@ void c_typecheck_baset::typecheck_declaration(
       // available
       symbolt &new_symbol = symbol_table.get_writeable_ref(identifier);
 
-      typecheck_assigns(static_cast<codet &>(contract), ID_C_spec_assigns);
       typecheck_spec_expr(static_cast<codet &>(contract), ID_C_spec_requires);
 
       typet ret_type = void_type();

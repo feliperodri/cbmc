@@ -809,14 +809,45 @@ void c_typecheck_baset::typecheck_spec_expr(
 }
 
 void c_typecheck_baset::typecheck_assigns(
-  codet &code,
-  const irep_idt &spec)
+  const code_typet &function_declarator,
+  const irept &contract)
 {
-  if(code.find(spec).is_not_nil())
-  {
-    exprt &constraint=
-      static_cast<exprt&>(code.add(spec));
+  exprt assigns =
+    static_cast<const exprt&>(contract.find(ID_C_spec_assigns));
 
-    typecheck_expr(constraint);
+  // MAke sure there is an assigns clause to check
+  if(assigns.is_not_nil())
+  {
+    for(code_typet::parametert curr_param : function_declarator.parameters())
+    {
+      // Function declaration formal parameters
+      if(curr_param.id() == ID_declaration){
+        ansi_c_declarationt &param_declaration = to_ansi_c_declaration(curr_param);
+
+        for(auto &decl : param_declaration.declarators())
+        {
+          typecheck_assigns(decl, assigns);
+        }
+      }
+    }
+  }
+}
+
+void c_typecheck_baset::typecheck_assigns(
+  const ansi_c_declaratort &declarator,
+  const exprt &assigns)
+{
+  for(exprt curr_op : assigns.operands())
+  {
+    if(curr_op.id() != ID_symbol) { continue; }
+    const symbol_exprt& symbol_op = to_symbol_expr(curr_op);
+
+    if(std::strcmp(symbol_op.get(ID_C_base_name).c_str(), declarator.get_base_name().c_str()) == 0)
+    {
+      error().source_location=declarator.source_location();
+      error() << "Formal parameter " << declarator.get_name()
+              << " appears in assigns clause." << eom;
+      throw 0;
+    }
   }
 }

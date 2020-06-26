@@ -149,36 +149,6 @@ static void check_apply_invariants(
     loop_end->set_condition(boolean_negate(loop_end->get_condition()));
 }
 
-static void remove_local_parameters(
-  const code_typet::parameterst &params,
-  exprt &assigns)
-{
-  // Remove locally-scoped, non-reference targets from assigns clause.
-  if(assigns.is_not_nil() && assigns.has_operands())
-  {
-    for(code_typet::parametert curr_param : params)
-    {
-      for(exprt::operandst::const_iterator
-            op_it = assigns.operands().begin();
-          op_it != assigns.operands().end();
-          op_it++)
-      {
-        exprt curr_op = *op_it;
-        if(curr_op.id() != ID_symbol) { continue; }
-        const symbol_exprt& symbol_op = to_symbol_expr(curr_op);
-
-        if(
-          symbol_op.get_identifier().c_str() ==
-          curr_param.get_identifier().c_str())
-        {
-          assigns.operands().erase(op_it);
-          break;
-        }
-      }
-    }
-  }
-}
-
 bool code_contractst::has_contract(const irep_idt fun_name)
 {
   const symbolt &f_sym = ns.lookup(fun_name);
@@ -260,9 +230,6 @@ bool code_contractst::apply_contract(
       }
     }
   }
-
-  // Remove locally-scoped, non-reference targets from assigns clause.
-  remove_local_parameters(type.parameters(), assigns);
 
   // Replace formal parameters
   code_function_callt::argumentst::const_iterator a_it =
@@ -623,8 +590,8 @@ void code_contractst::add_pointer_checks(const std::string &func_name)
   }
 
   int lines_to_iterate = standin_decls.instructions.size();
-  // program.insert_before_swap(ins_it, standin_decls);
-  program.destructive_insert(ins_it, standin_decls);
+  program.insert_before_swap(ins_it, standin_decls);
+  // program.destructive_insert(ins_it, standin_decls);
   std::advance(ins_it, lines_to_iterate);
 
   // Insert aliasing assertions
