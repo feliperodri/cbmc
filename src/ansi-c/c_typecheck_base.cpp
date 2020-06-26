@@ -734,7 +734,6 @@ void c_typecheck_baset::typecheck_declaration(
       {
         typecheck_assigns(to_code_type(declarator.type()), contract);
       }
-
       typecheck_symbol(symbol);
 
       // add code contract (if any); we typecheck this after the
@@ -742,6 +741,7 @@ void c_typecheck_baset::typecheck_declaration(
       // available
       symbolt &new_symbol = symbol_table.get_writeable_ref(identifier);
 
+      typecheck_assigns_exprs(static_cast<codet &>(contract), ID_C_spec_assigns);
       typecheck_spec_expr(static_cast<codet &>(contract), ID_C_spec_requires);
 
       typet ret_type = void_type();

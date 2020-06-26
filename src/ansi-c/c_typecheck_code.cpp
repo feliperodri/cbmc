@@ -851,3 +851,16 @@ void c_typecheck_baset::typecheck_assigns(
     }
   }
 }
+
+void c_typecheck_baset::typecheck_assigns_exprs(
+  codet &code,
+  const irep_idt &spec)
+{
+  if(code.find(spec).is_not_nil())
+  {
+    exprt &constraint=
+      static_cast<exprt&>(code.add(spec));
+
+    typecheck_expr(constraint);
+  }
+}
