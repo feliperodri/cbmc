@@ -111,7 +111,7 @@ protected:
     goto_programt::instructionst::iterator& ins_it,
     goto_programt& program,
     exprt& assigns,
-    std::map<exprt, exprt>& original_references,
+    std::vector<exprt>& original_references,
     std::set<exprt>& freely_assignable_exprs);
 
 
@@ -124,21 +124,20 @@ protected:
     goto_programt::instructionst::iterator& ins_it,
     goto_programt& program,
     exprt& assigns,
-    std::map<exprt, exprt>& original_references,
+    std::vector<exprt>& assigns_references,
     std::set<exprt>& freely_assignable_exprs);
 
   /// Creates a local variable declaration for each expression in the assigns
   /// clause (of the function given by f_sym), and stores them in created_decls.
   /// Then creates assignment statements to capture the memory addresses of each
   /// expression in the assigns clause within the associated local variable,
-  /// populating a map created_references from the original expression to the
-  /// associated variable.
+  /// populating a vector created_references of these local variables.
   void
   populate_assigns_references(
     const symbolt &f_sym,
     const irep_idt& func_id,
     goto_programt& created_decls,
-    std::map<exprt, exprt>& created_references);
+    std::vector<exprt>& created_references);
 
   void code_contracts(goto_functionst::goto_functiont &goto_function);
 

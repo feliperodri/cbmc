@@ -354,17 +354,21 @@ const symbolt &code_contractst::new_tmp_symbol(
 exprt create_alias_expression(
   const exprt &assigns,
   const exprt &lhs,
-  std::map<exprt, exprt> &aliasable_references)
+  std::vector<exprt> &aliasable_references)
 {
   bool first_iter = true;
   exprt running = false_exprt();
+  /*
   for(exprt::operandst::const_iterator op_it = assigns.operands().begin();
       op_it != assigns.operands().end();
       op_it++)
   {
+   */
+  for(auto aliasble : aliasable_references)
+  {
     //exprt leftPtr = unary_exprt(ID_address_of, ins_it->get_assign().lhs()); // does not set pointer type
     exprt leftPtr = exprt(ID_address_of, pointer_type(lhs.type()), {lhs});
-    exprt rightPtr = aliasable_references[*op_it];
+    exprt rightPtr = aliasble;
 
     if(first_iter)
     {
@@ -385,7 +389,7 @@ void code_contractst::populate_assigns_references(
   const symbolt &f_sym,
   const irep_idt &func_id,
   goto_programt &created_decls,
-  std::map<exprt, exprt> &created_references)
+  std::vector<exprt> &created_references)
 {
   const code_typet &type = to_code_type(f_sym.type);
   exprt assigns = static_cast<const exprt &>(type.find(ID_C_spec_assigns));
@@ -412,7 +416,7 @@ void code_contractst::populate_assigns_references(
       code_assignt(standin, std::move(op_addr)), f_sym.location));
 
     // Add a map entry from the original operand to the new symbol
-    created_references[curr_op] = standin;
+    created_references.push_back(standin);
   }
 }
 
@@ -420,7 +424,7 @@ void code_contractst::instrument_assn_statement(
   goto_programt::instructionst::iterator &ins_it,
   goto_programt &program,
   exprt &assigns,
-  std::map<exprt, exprt> &assigns_references,
+  std::vector<exprt> &assigns_references,
   std::set<exprt> &freely_assignable_exprs)
 {
   INVARIANT(
@@ -445,7 +449,7 @@ void code_contractst::instrument_call_statement(
   goto_programt::instructionst::iterator &ins_it,
   goto_programt &program,
   exprt &assigns,
-  std::map<exprt, exprt> &assigns_references,
+  std::vector<exprt> &aliasable_references,
   std::set<exprt> &freely_assignable_exprs)
 {
   INVARIANT(
@@ -457,13 +461,21 @@ void code_contractst::instrument_call_statement(
     to_symbol_expr(call.function()).get_identifier();
 
   if(std::strcmp(called_name.c_str(), "malloc") == 0){
+    aliasable_references.push_back(call.lhs());
+
+    // Make the variable, where result of malloc is stored, freely assignable.
+    goto_programt::instructionst::iterator local_ins_it = ins_it;
+    local_ins_it++;
+    if(local_ins_it->is_assign() && local_ins_it->get_assign().lhs().is_not_nil()){
+      freely_assignable_exprs.insert(local_ins_it->get_assign().lhs());
+    }
     return; // assume malloc edits no currently-existing memory objects.
   }
 
   if(call.lhs().is_not_nil())
   {
     exprt alias_expr =
-      create_alias_expression(assigns, call.lhs(), assigns_references);
+      create_alias_expression(assigns, call.lhs(), aliasable_references);
 
     goto_programt alias_assertion;
     alias_assertion.add(
@@ -537,7 +549,7 @@ void code_contractst::instrument_call_statement(
           continue;
         }
         exprt alias_expr =
-          create_alias_expression(assigns, *called_op_it, assigns_references);
+          create_alias_expression(assigns, *called_op_it, aliasable_references);
 
         goto_programt alias_assertion;
         alias_assertion.add(
@@ -631,7 +643,7 @@ bool code_contractst::add_pointer_checks(const std::string &func_name)
 
   // Create temporary variables to hold the assigns clause targets before they can be modified.
   goto_programt standin_decls;
-  std::map<exprt, exprt> original_references;
+  std::vector<exprt> original_references;
   populate_assigns_references(
     f_sym, func_id, standin_decls, original_references);
 
