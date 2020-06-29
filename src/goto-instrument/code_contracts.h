@@ -92,8 +92,16 @@ protected:
   /// \brief Enforce contract of a single function
   bool enforce_contract(const std::string &);
 
-  void
+
+  /// Insert assertion statements into the goto program to ensure that
+  /// assigned memory is within the assignable memory frame.
+  bool
   add_pointer_checks(const std::string &);
+
+  /// Check if there are any malloc statements which may be repeated because of
+  /// a goto statement that jumps back.
+  bool
+  check_for_looped_mallocs(const goto_programt &);
 
   /// Inserts an assertion statement into program before the assignment ins_it, to
   /// ensure that the left-hand-side of the assignment aliases some expression in

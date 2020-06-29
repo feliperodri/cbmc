@@ -457,7 +457,6 @@ void code_contractst::instrument_call_statement(
     to_symbol_expr(call.function()).get_identifier();
 
   if(std::strcmp(called_name.c_str(), "malloc") == 0){
-    std::cout << "DEBUGOUT: Encountered MALLOC! " << call.pretty() << std::endl;
     return; // assume malloc edits no currently-existing memory objects.
   }
 
@@ -550,18 +549,72 @@ void code_contractst::instrument_call_statement(
   }
 }
 
-void code_contractst::add_pointer_checks(const std::string &func_name)
+bool code_contractst::check_for_looped_mallocs(const goto_programt &program)
+{
+  // Collect all GOTOs and mallocs
+  std::vector<goto_programt::instructiont> back_gotos;
+  std::vector<goto_programt::instructiont> malloc_calls;
+
+  int idx = 0;
+  for(goto_programt::instructiont ins : program.instructions)
+  {
+    if(ins.is_backwards_goto())
+    {
+      back_gotos.push_back(ins);
+    }
+    if(ins.is_function_call())
+    {
+      code_function_callt call = ins.get_function_call();
+      const irep_idt &called_name =
+        to_symbol_expr(call.function()).get_identifier();
+
+      if(std::strcmp(called_name.c_str(), "malloc") == 0)
+      {
+        malloc_calls.push_back(ins);
+      }
+    }
+    idx++;
+  }
+  // Make sure there are no gotos that go back such that a malloc is between the goto and its destination (possible loop).
+  for(auto goto_entry : back_gotos)
+  {
+    for(const auto &t : goto_entry.targets)
+    {
+      for(auto malloc_entry : malloc_calls)
+      {
+        if(malloc_entry.location_number >= t->location_number &&
+          malloc_entry.location_number < goto_entry.location_number) {
+          log.error() << "Call to malloc at location "
+                      << malloc_entry.location_number << " falls between goto "
+                      << "source location " << goto_entry.location_number
+                      << " and it's destination at location "
+                      << t->location_number << ". "
+                      << "Unable to complete instrumentation, as this malloc "
+                      << "may be in a loop."
+                      << messaget::eom;
+          throw 0;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+bool code_contractst::add_pointer_checks(const std::string &func_name)
 {
   // Get the function object before instrumentation.
   auto old_fun = goto_functions.function_map.find(func_name);
   if(old_fun == goto_functions.function_map.end())
   {
-    return;
+    log.error() << "Could not find function '" << func_name
+                << "' in goto-program; not enforcing contracts."
+                << messaget::eom;
+    return true;
   }
   goto_programt &program = old_fun->second.body;
   if(program.instructions.empty()) // empty function body
   {
-    return;
+    return false;
   }
 
   const irep_idt func_id(func_name);
@@ -572,7 +625,7 @@ void code_contractst::add_pointer_checks(const std::string &func_name)
 
   // Return if there are no reference checks to perform.
   if(assigns.is_nil())
-    return;
+    return false;
 
   goto_programt::instructionst::iterator ins_it = program.instructions.begin();
 
@@ -591,8 +644,13 @@ void code_contractst::add_pointer_checks(const std::string &func_name)
 
   int lines_to_iterate = standin_decls.instructions.size();
   program.insert_before_swap(ins_it, standin_decls);
-  // program.destructive_insert(ins_it, standin_decls);
   std::advance(ins_it, lines_to_iterate);
+  //program.compute_location_numbers(ins_it->location_number);
+
+  if(check_for_looped_mallocs(program))
+  {
+    return true;
+  }
 
   // Insert aliasing assertions
   for(; ins_it != program.instructions.end(); std::advance(ins_it, 1))
@@ -612,6 +670,7 @@ void code_contractst::add_pointer_checks(const std::string &func_name)
                                 original_references, freely_assignable_exprs);
     }
   }
+  return false;
 }
 
 bool code_contractst::enforce_contract(const std::string &fun_to_enforce)
