@@ -528,7 +528,7 @@ target_list:
         ;
 
 target:
-          identifier
+         member_target
         | '*' target
         {
           $$=$1;
@@ -537,7 +537,29 @@ target:
         }
         ;
 
+member_target:
+         primary_target
+        | member_target '.' member_name
+        {
+          $$=$2;
+          set($$, ID_member);
+          mto($$, $1);
+          parser_stack($$).set(ID_component_name, parser_stack($3).get(ID_C_base_name));
+        }
+        | member_target TOK_ARROW member_name
+        {
+          $$=$2;
+          set($$, ID_ptrmember);
+          mto($$, $1);
+          parser_stack($$).set(ID_component_name, parser_stack($3).get(ID_C_base_name));
+        }
+        ;
 
+primary_target:
+         identifier
+        | '(' target ')'
+        { $$ = $2; }
+        ;
 
 
 statement_expression: '(' compound_statement ')'
