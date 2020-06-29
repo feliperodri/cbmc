@@ -815,12 +815,11 @@ void c_typecheck_baset::typecheck_assigns(
   exprt assigns =
     static_cast<const exprt&>(contract.find(ID_C_spec_assigns));
 
-  // MAke sure there is an assigns clause to check
+  // Make sure there is an assigns clause to check
   if(assigns.is_not_nil())
   {
     for(code_typet::parametert curr_param : function_declarator.parameters())
     {
-      // Function declaration formal parameters
       if(curr_param.id() == ID_declaration){
         ansi_c_declarationt &param_declaration = to_ansi_c_declaration(curr_param);
 
@@ -845,8 +844,11 @@ void c_typecheck_baset::typecheck_assigns(
     if(std::strcmp(symbol_op.get(ID_C_base_name).c_str(), declarator.get_base_name().c_str()) == 0)
     {
       error().source_location=declarator.source_location();
-      error() << "Formal parameter " << declarator.get_name()
-              << " appears in assigns clause." << eom;
+      error() << "Formal parameter " << declarator.get_name() << " without "
+              << "dereference appears in ASSIGNS clause. Assigning this "
+              << "parameter will never affect the state of the calling context."
+              << " Did you mean to write *" << declarator.get_name() << "?"
+              << eom;
       throw 0;
     }
   }

@@ -358,12 +358,6 @@ exprt create_alias_expression(
 {
   bool first_iter = true;
   exprt running = false_exprt();
-  /*
-  for(exprt::operandst::const_iterator op_it = assigns.operands().begin();
-      op_it != assigns.operands().end();
-      op_it++)
-  {
-   */
   for(auto aliasble : aliasable_references)
   {
     //exprt leftPtr = unary_exprt(ID_address_of, ins_it->get_assign().lhs()); // does not set pointer type
@@ -398,7 +392,6 @@ void code_contractst::populate_assigns_references(
   for(exprt curr_op : targets)
   {
     // Create an expression to capture the address of the operand
-    // exprt op_addr = unary_exprt(ID_address_of, *op_it); // does not set pointer type
     exprt op_addr =
       exprt(ID_address_of, pointer_type(curr_op.type()), {curr_op});
 
@@ -411,7 +404,6 @@ void code_contractst::populate_assigns_references(
 
     created_decls.add(goto_programt::make_decl(standin, f_sym.location));
 
-    // Add an assignment to that symbol of the address expression
     created_decls.add(goto_programt::make_assignment(
       code_assignt(standin, std::move(op_addr)), f_sym.location));
 
@@ -777,7 +769,6 @@ void code_contractst::add_contract_check(
   //   assume(requires)  [optional]
   //   ret=function(parameter1, ...)
   //   assert(ensures)
-  //   assume(false)
   // skip: ...
 
   // build skip so that if(nondet) can refer to it
@@ -858,14 +849,6 @@ void code_contractst::add_contract_check(
     check.add(
       goto_programt::make_assertion(ensures_cond, ensures.source_location()));
   }
-
-  // assume(false)
-  // check.add(
-  //  goto_programt::make_assumption(false_exprt(), ensures.source_location()));
-
-  // TODO: Create a return statement for the temporary variable
-  //code_returnt ret(call.lhs());
-  //check.add(goto_programt::make_return(ret, ensures.source_location()));
 
   // prepend the new code to dest
   check.destructive_append(tmp_skip);
