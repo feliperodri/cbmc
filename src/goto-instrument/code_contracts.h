@@ -139,6 +139,28 @@ protected:
     goto_programt& created_decls,
     std::vector<exprt>& created_references);
 
+
+  /// Creates a local variable declaration for each expression in operands,
+  /// and stores them in created_decls. Then creates assignment statements to
+  /// capture the memory addresses of each expression in the assigns clause
+  /// within the associated local variable, populating a vector
+  /// created_references of these local variables.
+  void
+  populate_assigns_reference(
+    std::vector<exprt> operands,
+    const symbolt &f_sym,
+    const irep_idt &func_id,
+    goto_programt &created_decls,
+    std::vector<exprt>& created_references);
+
+  /// Creates a boolean expression which is true when there exists an expression
+  /// in aliasable_references with the same pointer object and pointer offset as
+  /// the address of lhs.
+  exprt
+  create_alias_expression(
+    const exprt &lhs,
+    std::vector<exprt> &aliasable_references);
+
   void code_contracts(goto_functionst::goto_functiont &goto_function);
 
   /// \brief Does the named function have a contract?

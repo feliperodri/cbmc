@@ -478,7 +478,7 @@ void c_typecheck_baset::typecheck_expr_main(exprt &expr)
   else
   {
     error().source_location = expr.source_location();
-    error() << "unexpected expression: " << expr.pretty() << eom;
+    error() << "expression categorized improperly during parsing: " << expr.pretty() << eom;
     throw 0;
   }
 }

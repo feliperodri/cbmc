@@ -13,6 +13,7 @@ Date: February 2016
 
 #include "code_contracts.h"
 #include "pointer_predicates.h"
+#include <util/pointer_offset_size.h>
 
 #include <util/expr_util.h>
 #include <util/fresh_symbol.h>
@@ -273,14 +274,15 @@ bool code_contractst::apply_contract(
       exprt::operandst targets = assigns.operands();
       for(exprt curr_op : targets)
       {
-        if(curr_op.id() == ID_symbol)
+        if(curr_op.id() == ID_symbol ||
+          curr_op.id() == ID_dereference ||
+          curr_op.id() == ID_member ||
+          curr_op.id() == ID_ptrmember)
         {
           assigns_tgts.insert(curr_op);
         }
-        else if(curr_op.id() == ID_dereference)
+        else
         {
-          assigns_tgts.insert(curr_op);
-        } else {
           log.error() << "Unable to apply assigns clause for expression of type '"
                       << curr_op.id()
                       << "'; not enforcing assigns clause."
@@ -351,8 +353,7 @@ const symbolt &code_contractst::new_tmp_symbol(
     symbol_table);
 }
 
-exprt create_alias_expression(
-  const exprt &assigns,
+exprt code_contractst::create_alias_expression(
   const exprt &lhs,
   std::vector<exprt> &aliasable_references)
 {
@@ -361,36 +362,73 @@ exprt create_alias_expression(
   for(auto aliasble : aliasable_references)
   {
     //exprt leftPtr = unary_exprt(ID_address_of, ins_it->get_assign().lhs()); // does not set pointer type
-    exprt leftPtr = exprt(ID_address_of, pointer_type(lhs.type()), {lhs});
-    exprt rightPtr = aliasble;
+    exprt left_ptr = exprt(ID_address_of, pointer_type(lhs.type()), {lhs});
+    exprt right_ptr = aliasble;
 
-    if(first_iter)
+    exprt same_objct = same_object(left_ptr, right_ptr);
+    exprt same_offset = equal_exprt(pointer_offset(left_ptr), pointer_offset(right_ptr));
+
+    // TODO: check to make sure these optionals actually contain a value
+    // TODO: remove this once malloc is fixed, as it is not sound
+    auto left_size = size_of_expr(lhs.type(), ns);
+    auto right_size = size_of_expr(dereference_exprt(right_ptr).type(), ns);
+    if(left_size.has_value() && right_size.has_value())
     {
-      running = same_object(leftPtr, rightPtr);
-      first_iter = false;
+      exprt sizes_match = equal_exprt(left_size.value(), size_of_expr(dereference_exprt(right_ptr).type(), ns).value());
+      const exprt &compatible = binary_exprt(binary_exprt(same_objct, ID_and, same_offset), ID_and, sizes_match);
+      if(first_iter)
+      {
+        running = compatible;
+        first_iter = false;
+      }
+      else
+      {
+        running = binary_exprt(running, ID_or, compatible);
+      }
     }
-    else
-    {
-      exprt same = same_object(leftPtr, rightPtr);
-      running = binary_exprt(running, ID_or, same);
+    else{
+      const exprt &compatible = binary_exprt(same_objct, ID_and, same_offset);
+      if(first_iter)
+      {
+        running = compatible;
+        first_iter = false;
+      }
+      else
+      {
+        running = binary_exprt(running, ID_or, compatible);
+      }
+
     }
   }
 
   return running;
 }
 
-void code_contractst::populate_assigns_references(
+void code_contractst::populate_assigns_reference(
+  std::vector<exprt> targets,
   const symbolt &f_sym,
   const irep_idt &func_id,
   goto_programt &created_decls,
   std::vector<exprt> &created_references)
 {
-  const code_typet &type = to_code_type(f_sym.type);
-  exprt assigns = static_cast<const exprt &>(type.find(ID_C_spec_assigns));
-
-  exprt::operandst &targets = assigns.operands();
   for(exprt curr_op : targets)
   {
+    if(curr_op.type().id() == ID_struct_tag)
+    {
+      const symbolt &struct_sym = ns.lookup(to_tag_type(curr_op.type()));
+
+      std::vector<exprt> component_members;
+      const struct_typet &struct_t = to_struct_type(struct_sym.type);
+      for(struct_union_typet::componentt comp : struct_t.components())
+      {
+        exprt curr_member = member_exprt(curr_op, comp);
+        component_members.push_back(curr_member);
+      }
+      if(component_members.size() > 0){
+        populate_assigns_reference(component_members, f_sym, func_id, created_decls, created_references);
+      }
+    }
+
     // Create an expression to capture the address of the operand
     exprt op_addr =
       exprt(ID_address_of, pointer_type(curr_op.type()), {curr_op});
@@ -412,6 +450,18 @@ void code_contractst::populate_assigns_references(
   }
 }
 
+void code_contractst::populate_assigns_references(
+  const symbolt &f_sym,
+  const irep_idt &func_id,
+  goto_programt &created_decls,
+  std::vector<exprt> &created_references)
+{
+  const code_typet &type = to_code_type(f_sym.type);
+  exprt assigns = static_cast<const exprt &>(type.find(ID_C_spec_assigns));
+
+  populate_assigns_reference(assigns.operands(), f_sym, func_id, created_decls, created_references);
+}
+
 void code_contractst::instrument_assn_statement(
   goto_programt::instructionst::iterator &ins_it,
   goto_programt &program,
@@ -428,7 +478,7 @@ void code_contractst::instrument_assn_statement(
   {
     return;
   }
-  exprt alias_expr = create_alias_expression(assigns, lhs, assigns_references);
+  exprt alias_expr = create_alias_expression(lhs, assigns_references);
 
   goto_programt alias_assertion;
   alias_assertion.add(
@@ -467,7 +517,7 @@ void code_contractst::instrument_call_statement(
   if(call.lhs().is_not_nil())
   {
     exprt alias_expr =
-      create_alias_expression(assigns, call.lhs(), aliasable_references);
+      create_alias_expression(call.lhs(), aliasable_references);
 
     goto_programt alias_assertion;
     alias_assertion.add(
@@ -541,7 +591,7 @@ void code_contractst::instrument_call_statement(
           continue;
         }
         exprt alias_expr =
-          create_alias_expression(assigns, *called_op_it, aliasable_references);
+          create_alias_expression(*called_op_it, aliasable_references);
 
         goto_programt alias_assertion;
         alias_assertion.add(
