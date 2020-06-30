@@ -11,6 +11,8 @@ Author: Daniel Kroening, kroening@kroening.com
 
 #include "c_typecheck_base.h"
 
+#include <cstring>
+
 #include <util/c_types.h>
 #include <util/config.h>
 #include <util/expr_initializer.h>
@@ -805,5 +807,70 @@ void c_typecheck_baset::typecheck_spec_expr(
 
     typecheck_expr(constraint);
     implicit_typecast_bool(constraint);
+  }
+}
+
+void c_typecheck_baset::typecheck_assigns(
+  const code_typet &function_declarator,
+  const irept &contract)
+{
+  exprt assigns = static_cast<const exprt &>(contract.find(ID_C_spec_assigns));
+
+  // Make sure there is an assigns clause to check
+  if(assigns.is_not_nil())
+  {
+    for(code_typet::parametert curr_param : function_declarator.parameters())
+    {
+      if(curr_param.id() == ID_declaration)
+      {
+        ansi_c_declarationt &param_declaration =
+          to_ansi_c_declaration(curr_param);
+
+        for(auto &decl : param_declaration.declarators())
+        {
+          typecheck_assigns(decl, assigns);
+        }
+      }
+    }
+  }
+}
+
+void c_typecheck_baset::typecheck_assigns(
+  const ansi_c_declaratort &declarator,
+  const exprt &assigns)
+{
+  for(exprt curr_op : assigns.operands())
+  {
+    if(curr_op.id() != ID_symbol)
+    {
+      continue;
+    }
+    const symbol_exprt &symbol_op = to_symbol_expr(curr_op);
+
+    if(
+      std::strcmp(
+        symbol_op.get(ID_C_base_name).c_str(),
+        declarator.get_base_name().c_str()) == 0)
+    {
+      error().source_location = declarator.source_location();
+      error() << "Formal parameter " << declarator.get_name() << " without "
+              << "dereference appears in ASSIGNS clause. Assigning this "
+              << "parameter will never affect the state of the calling context."
+              << " Did you mean to write *" << declarator.get_name() << "?"
+              << eom;
+      throw 0;
+    }
+  }
+}
+
+void c_typecheck_baset::typecheck_assigns_exprs(
+  codet &code,
+  const irep_idt &spec)
+{
+  if(code.find(spec).is_not_nil())
+  {
+    exprt &constraint = static_cast<exprt &>(code.add(spec));
+
+    typecheck_expr(constraint);
   }
 }
