@@ -12,27 +12,25 @@ Date: February 2016
 /// Verify and use annotated invariants and pre/post-conditions
 
 #include "code_contracts.h"
+#include "loop_utils.h"
 #include "pointer_predicates.h"
-#include <util/pointer_offset_size.h>
 
-#include <util/expr_util.h>
-#include <util/fresh_symbol.h>
-#include <util/replace_symbol.h>
-
-#include <goto-programs/remove_skip.h>
+#include <algorithm>
+#include <cstring>
+#include <iostream>
 
 #include <analyses/local_may_alias.h>
 
+#include <goto-programs/remove_skip.h>
+
 #include <linking/static_lifetime_init.h>
 
+#include <util/c_types.h>
+#include <util/expr_util.h>
+#include <util/fresh_symbol.h>
 #include <util/message.h>
-
-#include <iostream>
-#include <algorithm>
-#include <unordered_set>
-
-#include "loop_utils.h"
-#include "c_types.h"
+#include <util/pointer_offset_size.h>
+#include <util/replace_symbol.h>
 
 /// Predicate to be used with the exprt::visit() function. The function
 /// found_return_value() will return `true` iff this predicate is called on an

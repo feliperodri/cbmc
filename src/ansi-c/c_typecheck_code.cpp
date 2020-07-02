@@ -11,6 +11,8 @@ Author: Daniel Kroening, kroening@kroening.com
 
 #include "c_typecheck_base.h"
 
+#include <cstring>
+
 #include <util/c_types.h>
 #include <util/config.h>
 #include <util/expr_initializer.h>
