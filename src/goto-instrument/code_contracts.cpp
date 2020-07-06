@@ -366,36 +366,35 @@ exprt code_contractst::create_alias_expression(
     exprt same_objct = same_object(left_ptr, right_ptr);
     exprt same_offset = equal_exprt(pointer_offset(left_ptr), pointer_offset(right_ptr));
 
-    // TODO: check to make sure these optionals actually contain a value
-    // TODO: remove this once malloc is fixed, as it is not sound
     auto left_size = size_of_expr(lhs.type(), ns);
     auto right_size = size_of_expr(dereference_exprt(right_ptr).type(), ns);
     if(left_size.has_value() && right_size.has_value())
     {
-      exprt sizes_match = equal_exprt(left_size.value(), size_of_expr(dereference_exprt(right_ptr).type(), ns).value());
-      const exprt &compatible = binary_exprt(binary_exprt(same_objct, ID_and, same_offset), ID_and, sizes_match);
-      if(first_iter)
+      if(std::strcmp(left_size.value().get(ID_value).c_str(), right_size.value().get(ID_value).c_str()) == 0)
       {
-        running = compatible;
-        first_iter = false;
-      }
-      else
-      {
-        running = binary_exprt(running, ID_or, compatible);
+        const exprt &compatible = binary_exprt(same_objct, ID_and, same_offset);
+        if(first_iter)
+        {
+          running = compatible;
+          first_iter = false;
+        }
+        else
+        {
+          running = binary_exprt(running, ID_or, compatible);
+        }
       }
     }
-    else{
-      const exprt &compatible = binary_exprt(same_objct, ID_and, same_offset);
-      if(first_iter)
-      {
-        running = compatible;
-        first_iter = false;
-      }
-      else
-      {
-        running = binary_exprt(running, ID_or, compatible);
-      }
-
+    else if(!left_size.has_value())
+    {
+      log.error() << "Unable to determine size of left assigned expression: "
+                  << left_ptr.pretty() << messaget::eom;
+      // throw 0;
+    }
+    else
+    {
+      log.error() << "Unable to determine size of right assigned expression: "
+                  << right_ptr.pretty() << messaget::eom;
+      // throw 0;
     }
   }
 
@@ -465,14 +464,16 @@ void code_contractst::instrument_assn_statement(
   goto_programt &program,
   exprt &assigns,
   std::vector<exprt> &assigns_references,
-  std::set<exprt> &freely_assignable_exprs)
+  std::set<dstringt> &freely_assignable_symbols)
 {
   INVARIANT(
     ins_it->is_assign(),
     "The first argument of instrument_assn_statement should always be"
     " an assignment");
   const exprt &lhs = ins_it->get_assign().lhs();
-  if(freely_assignable_exprs.find(lhs) != freely_assignable_exprs.end())
+  if(lhs.id() == ID_symbol &&
+     freely_assignable_symbols.find(to_symbol_expr(lhs).get_identifier())
+     != freely_assignable_symbols.end())
   {
     return;
   }
@@ -489,30 +490,73 @@ void code_contractst::instrument_call_statement(
   goto_programt::instructionst::iterator &ins_it,
   goto_programt &program,
   exprt &assigns,
+  const irep_idt &func_id,
   std::vector<exprt> &aliasable_references,
-  std::set<exprt> &freely_assignable_exprs)
+  std::set<dstringt> &freely_assignable_symbols)
 {
   INVARIANT(
     ins_it->is_function_call(),
     "The first argument of instrument_call_statement should always be "
     "a function call");
+  const symbolt &f_sym = ns.lookup(func_id);
+
   code_function_callt call = ins_it->get_function_call();
   const irep_idt &called_name =
     to_symbol_expr(call.function()).get_identifier();
 
-  if(std::strcmp(called_name.c_str(), "malloc") == 0){
-    aliasable_references.push_back(call.lhs());
+  if(std::strcmp(called_name.c_str(), "malloc") == 0)
+  {
+    // std::cout << "DEBUGOUT: Found a malloc! " << std::endl;
 
-    // Make the variable, where result of malloc is stored, freely assignable.
+    // Make freshly allocated memory assignable, if we can determine its type.
     goto_programt::instructionst::iterator local_ins_it = ins_it;
     local_ins_it++;
-    if(local_ins_it->is_assign() && local_ins_it->get_assign().lhs().is_not_nil()){
-      freely_assignable_exprs.insert(local_ins_it->get_assign().lhs());
+    if(local_ins_it->is_assign())
+    {
+      const exprt &rhs = local_ins_it->get_assign().rhs();
+      if(rhs.id() == ID_typecast)
+      {
+        const exprt &malloc_cast = to_typecast_expr(rhs);
+        typet cast_type = malloc_cast.type();
+        //++ins_it;
+        // std::cout << "DEBUGOUT: Found a type cast! " << std::endl << cast_type.pretty()  << std::endl;
+        // typet cast_type = rhs.type();
+        // Declare a new symbol to stand in for the reference
+        symbol_exprt cast_capture = new_tmp_symbol(
+          cast_type,
+          f_sym.location,
+          func_id,
+          f_sym.mode).symbol_expr();
+        // std::cout << "DEBUGOUT: Created symbol: " << std::endl << cast_capture.pretty()  << std::endl;
+        goto_programt pointer_capture;
+
+        pointer_capture.add(goto_programt::make_decl(cast_capture, f_sym.location));
+        pointer_capture.add(goto_programt::instructiont(code_assignt(cast_capture, rhs), f_sym.location, ASSIGN, nil_exprt(), {}));
+
+        // Add a map entry from the original operand to the new symbol
+        aliasable_references.push_back(cast_capture);
+
+        std::vector<exprt> top_ptr;
+        top_ptr.push_back(dereference_exprt(cast_capture));
+        populate_assigns_reference(top_ptr, f_sym, func_id, pointer_capture, aliasable_references);
+
+        int lines_to_iterate = pointer_capture.instructions.size();
+        program.insert_before_swap(local_ins_it, pointer_capture);
+        std::advance(ins_it, lines_to_iterate + 1);
+      }
+      else
+      {
+        log.error() << "Malloc is called but the result is not cast. "
+                    << "Excluding result from the assignable memory frame ."
+                    << messaget::eom;
+      }
     }
     return; // assume malloc edits no currently-existing memory objects.
   }
 
-  if(call.lhs().is_not_nil())
+  if(call.lhs().is_not_nil() && call.lhs().id() == ID_symbol &&
+    freely_assignable_symbols.find(to_symbol_expr(call.lhs()).get_identifier())
+    == freely_assignable_symbols.end())
   {
     exprt alias_expr =
       create_alias_expression(call.lhs(), aliasable_references);
@@ -583,8 +627,10 @@ void code_contractst::instrument_call_statement(
           called_op_it != called_assigns.operands().end();
           called_op_it++)
       {
-        if(freely_assignable_exprs.find(*called_op_it) !=
-           freely_assignable_exprs.end())
+        if(called_op_it->id() == ID_symbol &&
+          freely_assignable_symbols.find(
+             to_symbol_expr(*called_op_it).get_identifier()) !=
+          freely_assignable_symbols.end())
         {
           continue;
         }
@@ -688,10 +734,10 @@ bool code_contractst::add_pointer_checks(const std::string &func_name)
     f_sym, func_id, standin_decls, original_references);
 
   // Create a list of variables that are okay to assign.
-  std::set<exprt> freely_assignable_exprs;
+  std::set<dstringt> freely_assignable_symbols;
   for(code_typet::parametert param : type.parameters())
   {
-    freely_assignable_exprs.insert(param);
+    freely_assignable_symbols.insert(param.get_identifier());
   }
 
   int lines_to_iterate = standin_decls.instructions.size();
@@ -709,17 +755,17 @@ bool code_contractst::add_pointer_checks(const std::string &func_name)
   {
     if(ins_it->is_decl())
     {
-      freely_assignable_exprs.insert(ins_it->get_decl().symbol());
+      freely_assignable_symbols.insert(ins_it->get_decl().symbol().get_identifier());
     }
     else if(ins_it->is_assign())
     {
       instrument_assn_statement(ins_it, program, assigns,
-                                original_references, freely_assignable_exprs);
+                                original_references, freely_assignable_symbols);
     }
     else if(ins_it->is_function_call())
     {
-      instrument_call_statement(ins_it, program, assigns,
-                                original_references, freely_assignable_exprs);
+      instrument_call_statement(ins_it, program, assigns, func_id,
+                                original_references, freely_assignable_symbols);
     }
   }
   return false;

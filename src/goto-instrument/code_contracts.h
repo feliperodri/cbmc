@@ -112,7 +112,7 @@ protected:
     goto_programt& program,
     exprt& assigns,
     std::vector<exprt>& original_references,
-    std::set<exprt>& freely_assignable_exprs);
+    std::set<dstringt>& freely_assignable_symbols);
 
 
   /// Inserts an assertion statement into program before the function call at
@@ -124,8 +124,9 @@ protected:
     goto_programt::instructionst::iterator& ins_it,
     goto_programt& program,
     exprt& assigns,
+    const irep_idt &func_id,
     std::vector<exprt>& assigns_references,
-    std::set<exprt>& freely_assignable_exprs);
+    std::set<dstringt>& freely_assignable_symbols);
 
   /// Creates a local variable declaration for each expression in the assigns
   /// clause (of the function given by f_sym), and stores them in created_decls.
