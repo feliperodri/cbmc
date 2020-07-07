@@ -514,8 +514,7 @@ void code_contractst::instrument_call_statement(
       const exprt &rhs = local_ins_it->get_assign().rhs();
       if(rhs.id() == ID_typecast)
       {
-        const exprt &malloc_cast = to_typecast_expr(rhs);
-        typet cast_type = malloc_cast.type();
+        typet cast_type = rhs.type();
 
         // Declare a new symbol to captured the result of malloc after cast.
         symbol_exprt cast_capture = new_tmp_symbol(
@@ -545,7 +544,7 @@ void code_contractst::instrument_call_statement(
                     << messaget::eom;
       }
     }
-    return; // assume malloc edits no currently-existing memory objects.
+    return; // assume malloc edits no pre-existing memory objects.
   }
 
   if(call.lhs().is_not_nil() && call.lhs().id() == ID_symbol &&
