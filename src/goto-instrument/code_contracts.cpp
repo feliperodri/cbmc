@@ -506,8 +506,6 @@ void code_contractst::instrument_call_statement(
 
   if(std::strcmp(called_name.c_str(), "malloc") == 0)
   {
-    // std::cout << "DEBUGOUT: Found a malloc! " << std::endl;
-
     // Make freshly allocated memory assignable, if we can determine its type.
     goto_programt::instructionst::iterator local_ins_it = ins_it;
     local_ins_it++;
@@ -518,24 +516,23 @@ void code_contractst::instrument_call_statement(
       {
         const exprt &malloc_cast = to_typecast_expr(rhs);
         typet cast_type = malloc_cast.type();
-        //++ins_it;
-        // std::cout << "DEBUGOUT: Found a type cast! " << std::endl << cast_type.pretty()  << std::endl;
-        // typet cast_type = rhs.type();
-        // Declare a new symbol to stand in for the reference
+
+        // Declare a new symbol to captured the result of malloc after cast.
         symbol_exprt cast_capture = new_tmp_symbol(
           cast_type,
           f_sym.location,
           func_id,
           f_sym.mode).symbol_expr();
-        // std::cout << "DEBUGOUT: Created symbol: " << std::endl << cast_capture.pretty()  << std::endl;
-        goto_programt pointer_capture;
 
+        goto_programt pointer_capture;
         pointer_capture.add(goto_programt::make_decl(cast_capture, f_sym.location));
         pointer_capture.add(goto_programt::instructiont(code_assignt(cast_capture, rhs), f_sym.location, ASSIGN, nil_exprt(), {}));
 
-        // Add a map entry from the original operand to the new symbol
+        // Allow future assignment LHSs to alias this symbol.
         aliasable_references.push_back(cast_capture);
 
+        // Allow future assignment LHSs to alias the cast symbol, and any
+        // constituent subcomponents (as in structs).
         std::vector<exprt> top_ptr;
         top_ptr.push_back(dereference_exprt(cast_capture));
         populate_assigns_reference(top_ptr, f_sym, func_id, pointer_capture, aliasable_references);
