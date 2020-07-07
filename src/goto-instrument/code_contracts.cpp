@@ -528,9 +528,6 @@ void code_contractst::instrument_call_statement(
         pointer_capture.add(goto_programt::make_decl(cast_capture, f_sym.location));
         pointer_capture.add(goto_programt::instructiont(code_assignt(cast_capture, rhs), f_sym.location, ASSIGN, nil_exprt(), {}));
 
-        // Allow future assignment LHSs to alias this symbol.
-        aliasable_references.push_back(cast_capture);
-
         // Allow future assignment LHSs to alias the cast symbol, and any
         // constituent subcomponents (as in structs).
         std::vector<exprt> top_ptr;
