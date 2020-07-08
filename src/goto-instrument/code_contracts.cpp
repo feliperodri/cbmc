@@ -384,17 +384,19 @@ exprt code_contractst::create_alias_expression(
         }
       }
     }
-    else if(!left_size.has_value())
-    {
-      log.error() << "Unable to determine size of left assigned expression: "
-                  << left_ptr.pretty() << messaget::eom;
-      // throw 0;
-    }
     else
     {
-      log.error() << "Unable to determine size of right assigned expression: "
-                  << right_ptr.pretty() << messaget::eom;
-      // throw 0;
+      const exprt &same_size = binary_exprt(object_size(left_ptr), ID_and, object_size(right_ptr));
+      const exprt &compatible = binary_exprt(binary_exprt(same_objct, ID_and, same_offset), ID_and, same_size);
+      if(first_iter)
+      {
+        running = compatible;
+        first_iter = false;
+      }
+      else
+      {
+        running = binary_exprt(running, ID_or, compatible);
+      }
     }
   }
 
