@@ -1,6 +1,9 @@
 #include <assert.h>
 
-void foo(int *x) __CPROVER_assigns(*x)
+void foo(int *x)
+__CPROVER_assigns(*x);
+
+void foo(int *x)
 {
   *x = 7;
 }

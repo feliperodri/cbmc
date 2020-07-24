@@ -12,6 +12,8 @@ Author: Daniel Kroening, kroening@kroening.com
 #include "c_typecheck_base.h"
 
 #include <cassert>
+#include <cstring>
+#include <iostream>
 #include <sstream>
 
 #include <util/arith_tools.h>
@@ -473,7 +475,44 @@ void c_typecheck_baset::typecheck_expr_main(exprt &expr)
   else if(expr.id()==ID_C_spec_assigns ||
           expr.id()==ID_target_list)
   {
+      // already type checked
+  }
+  else if(expr.id()==ID_int_range)
+  {
     // already type checked
+      exprt &lower = expr.operands()[0];
+      exprt &upper = expr.operands()[1];
+
+    if(lower.id() == ID_constant || lower.id() == ID_identifier)
+    {
+      dstringt c_type = lower.type().get(ID_C_c_type);
+      if(strcmp(c_type.c_str(), ID_signed_int.c_str()) != 0 &&
+         strcmp(c_type.c_str(), ID_unsigned_int.c_str()) != 0)
+      {
+        error().source_location = expr.source_location();
+        // error() << "Lower bound of range should be an integer, but got: " << lower.pretty()
+        error() << "Lower bound of range should be an integer, but got: " << lower.type().pretty()
+                << eom;
+        throw 0;
+      }
+    }
+
+    if(upper.id() == ID_constant || upper.id() == ID_identifier)
+    {
+      dstringt u_type = upper.type().get(ID_C_c_type);
+      if(strcmp(u_type.c_str(), ID_signed_int.c_str()) != 0 &&
+         strcmp(u_type.c_str(), ID_unsigned_int.c_str()) != 0)
+      {
+        error().source_location = expr.source_location();
+        error() << "Upper bound of range should be an integer, but got: " << upper.pretty()
+                << eom;
+        throw 0;
+      }
+    }
+  }
+  else if(expr.id()==ID_array_range)
+  {
+      // already type checked
   }
   else
   {

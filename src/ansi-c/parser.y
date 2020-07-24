@@ -101,6 +101,7 @@ extern char *yyansi_ctext;
 %token TOK_NE        "!="
 %token TOK_ANDAND    "&&"
 %token TOK_OROR      "||"
+%token TOK_RANGE     ".."
 %token TOK_ELLIPSIS  "..."
 
 /*** modifying assignment operators ***/
@@ -205,6 +206,8 @@ extern char *yyansi_ctext;
 %token TOK_CPROVER_REQUIRES  "__CPROVER_requires"
 %token TOK_CPROVER_ENSURES  "__CPROVER_ensures"
 %token TOK_CPROVER_ASSIGNS "__CPROVER_assigns"
+%token TOK_CPROVER_NOTHING "__CPROVER_nothing"
+%token TOK_CPROVER_OLD "__CPROVER_old"
 %token TOK_IMPLIES     "==>"
 %token TOK_EQUIVALENT  "<==>"
 %token TOK_XORXOR      "^^"
@@ -335,6 +338,13 @@ constant: integer
 
 primary_expression:
           identifier
+        | TOK_CPROVER_OLD '(' identifier ')'
+        {
+          $$=$3; // this modifier does nothing for now
+          /*$$=$1;
+          set($$, ID_old);
+          mto($$, $3);*/
+        }
         | constant
         | '(' comma_expression ')'
         { $$ = $2; }
@@ -519,7 +529,9 @@ assigns_opt:
         ;
 
 target_list:
-          target
+          TOK_CPROVER_NOTHING
+        { init($$, ID_target_list);}
+        | target
         {
           init($$, ID_target_list);
           mto($$, $1);
@@ -532,8 +544,31 @@ target_list:
         ;
 
 target:
+         deref_target
+        | target '[' array_index ']'
+        { binary($$, $1, $2, ID_array_range, $3); }
+        | target '[' array_range ']'
+        { binary($$, $1, $2, ID_array_range, $3); }
+        ;
+
+array_index:
+          identifier
+        | integer
+        ;
+
+array_range:
+        array_index ',' array_index
+        {
+          $$=$2;
+          set($$, ID_int_range);
+          mto($$, $1);
+          mto($$, $3);
+        }
+        ;
+
+deref_target:
          member_target
-        | '*' target
+        | '*' deref_target
         {
           $$=$1;
           set($$, ID_dereference);
@@ -1044,6 +1079,7 @@ post_declarator_attributes_opt:
         | post_declarator_attributes
         ;
 
+
 declaring_list:
           declaration_specifier declarator
           post_declarator_attributes_opt
@@ -1054,12 +1090,35 @@ declaring_list:
             init($$, ID_declaration);
             parser_stack($$).type().swap(parser_stack($1));
             PARSER.add_declarator(parser_stack($$), parser_stack($2));
+            create_function_scope($$);
           }
           initializer_opt
+          assigns_opt
+          requires_opt
+          ensures_opt
         {
-          // add the initializer
           $$=$4;
-          to_ansi_c_declaration(parser_stack($$)).add_initializer(parser_stack($5));
+
+          if(parser_stack($6).is_not_nil()) // Capture assigns clause
+            parser_stack($$).add(ID_C_spec_assigns).swap(parser_stack($6));
+
+          // Capture code contract
+          if(parser_stack($7).is_not_nil())
+            parser_stack($$).add(ID_C_spec_requires).swap(parser_stack($7));
+          if(parser_stack($8).is_not_nil())
+            parser_stack($$).add(ID_C_spec_ensures).swap(parser_stack($8));
+
+          // add the initializer
+          if(parser_stack($5).is_not_nil())
+          {
+            to_ansi_c_declaration(parser_stack($$)).add_initializer(parser_stack($5));
+          }
+
+          // Kill the scope that 'function_head' creates.
+          PARSER.pop_scope();
+
+          // We are no longer in any function.
+          PARSER.set_function(irep_idt());
         }
         | type_specifier declarator
           post_declarator_attributes_opt
@@ -1070,12 +1129,35 @@ declaring_list:
             init($$, ID_declaration);
             parser_stack($$).type().swap(parser_stack($1));
             PARSER.add_declarator(parser_stack($$), parser_stack($2));
+            create_function_scope($$);
           }
           initializer_opt
+          assigns_opt
+          requires_opt
+          ensures_opt
         {
-          // add the initializer
           $$=$4;
-          to_ansi_c_declaration(parser_stack($$)).add_initializer(parser_stack($5));
+
+          if(parser_stack($6).is_not_nil()) // Capture assigns clause
+            parser_stack($$).add(ID_C_spec_assigns).swap(parser_stack($6));
+
+          // Capture code contract
+          if(parser_stack($7).is_not_nil())
+            parser_stack($$).add(ID_C_spec_requires).swap(parser_stack($7));
+          if(parser_stack($8).is_not_nil())
+            parser_stack($$).add(ID_C_spec_ensures).swap(parser_stack($8));
+
+          // add the initializer
+          if(parser_stack($5).is_not_nil())
+          {
+            to_ansi_c_declaration(parser_stack($$)).add_initializer(parser_stack($5));
+          }
+
+          // Kill the scope that 'function_head' creates.
+          PARSER.pop_scope();
+
+          // We are no longer in any function.
+          PARSER.set_function(irep_idt());
         }
         | TOK_GCC_AUTO_TYPE declarator
           post_declarator_attributes_opt '=' initializer
@@ -2909,21 +2991,8 @@ asm_definition:
 
 function_definition:
           function_head
-          assigns_opt
-          requires_opt
-          ensures_opt
           function_body
         {
-
-          // Capture assigns clause
-          if(parser_stack($2).is_not_nil())
-            parser_stack($1).add(ID_C_spec_assigns).swap(parser_stack($2));
-
-          // Capture code contract
-          if(parser_stack($3).is_not_nil())
-            parser_stack($1).add(ID_C_spec_requires).swap(parser_stack($3));
-          if(parser_stack($4).is_not_nil())
-            parser_stack($1).add(ID_C_spec_ensures).swap(parser_stack($4));
           // The head is a declaration with one declarator,
           // and the body becomes the 'value'.
           $$=$1;
@@ -2931,7 +3000,7 @@ function_definition:
             to_ansi_c_declaration(parser_stack($$));
 
           assert(ansi_c_declaration.declarators().size()==1);
-          ansi_c_declaration.add_initializer(parser_stack($5));
+          ansi_c_declaration.add_initializer(parser_stack($2));
 
           // Kill the scope that 'function_head' creates.
           PARSER.pop_scope();
