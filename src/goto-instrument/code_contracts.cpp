@@ -381,100 +381,23 @@ exprt code_contractst::create_alias_expression(
   exprt running = false_exprt();
   for(auto aliasble : aliasable_references)
   {
-    //exprt leftPtr = unary_exprt(ID_address_of, ins_it->get_assign().lhs()); // does not set pointer type
     exprt left_ptr = exprt(ID_address_of, pointer_type(lhs.type()), {lhs});
-    /*
-    if(lhs.id() == ID_dereference)
-    {
-        left_ptr = to_dereference_expr(lhs).pointer();
-    }
-     */
     exprt right_ptr = aliasble;
 
     exprt same_objct = same_object(left_ptr, right_ptr);
-    // exprt same_offset = not_exprt(equal_exprt(pointer_offset(left_ptr), pointer_offset(right_ptr)));
-    ////exprt same_offset = equal_exprt(pointer_offset(left_ptr), pointer_offset(right_ptr));
-    /*
-  pointer_typet(typet _subtype, std::size_t width)
-    : bitvector_typet(ID_pointer, width)
-  {
-    subtype().swap(_subtype);
-  }
-    typet cast_type = pointer_type(void_type());
-    cast_type.subtype().set(ID_C_constant, true);
-    // exprt cast_left = typecast_exprt(left_ptr, cast_type);
-    exprt cast_left = typecast_exprt(lhs, cast_type);
-    exprt left_offset = pointer_offset(cast_left);
-      */
-
-    /*
-      exprt left_offset=pointer_offset(left_ptr);
-      left_offset.add_source_location()=lhs.source_location();
-
-      // return typecast_exprt::conditional_cast(left_offset, signed_int_type());
-     */
-    // exprt same_offset = equal_exprt(left_offset,  typecast_exprt(right_ptr, left_offset.type()));
     exprt same_offset = equal_exprt(lhs,  typecast_exprt(right_ptr, lhs.type()));
-      //exprt same_offset = equal_exprt(typecast_exprt::conditional_cast(left_offset, signed_long_int_type()), typecast_exprt(right_ptr, left_offset.type()));
-    ///exprt same_offset = binary_exprt(right_ptr, ID_gt, pointer_offset(left_ptr)); // gives the symbolic execution problems...
-    // std::cout << "DEBUGOUT: pointer: " << std::endl;
-    // std::cout << left_ptr.pretty() << std::endl;
-    //exprt same_offset = binary_relation_exprt(pointer_offset(left_ptr), ID_ge,constant_exprt(irep_idt(dstringt("0")), signed_size_type()));
 
-    std::cout << "DEBUGOUT: ALPHA" << std::endl;
-      auto left_size = size_of_expr(pointer_offset(left_ptr).type(), ns);
-    /*
-    // auto right_size = size_of_expr(dereference_exprt(right_ptr).type(), ns);
-    auto right_size = size_of_expr(right_ptr.type(), ns);
-    if(left_size.has_value() && right_size.has_value())
+    auto left_size = size_of_expr(pointer_offset(left_ptr).type(), ns);
+    const exprt &compatible = same_offset;
+    if(first_iter)
     {
-        std::cout << "DEBUGOUT: BRAVO" << std::endl;
-
-        if(true || (std::strcmp(left_size.value().get(ID_value).c_str(), right_size.value().get(ID_value).c_str()) == 0)) // TODO: remove trivial condition
-      {
-      */
-          std::cout << "DEBUGOUT: CHARLIE" << std::endl;
-          const exprt &compatible = same_offset;
-        //const exprt &compatible = binary_exprt(same_objct, ID_and, same_offset);
-        if(first_iter)
-        {
-          std::cout << "DEBUGOUT: DELTA" << std::endl;
-          running = compatible;
-          first_iter = false;
-        }
-        else
-        {
-          std::cout << "DEBUGOUT: ECHO" << std::endl;
-          running = binary_exprt(running, ID_or, compatible);
-        }
-        /*
-      } else{
-            std::cout << "DEBUGOUT: INDIA" << std::endl;
-            std::cout << "DEBUGOUT: LEFT" << left_size.value().get(ID_value).c_str() << std::endl;
-            std::cout << "DEBUGOUT: RIGHT" << right_size.value().get(ID_value).c_str() << std::endl;
-
-        }
+      running = compatible;
+      first_iter = false;
     }
     else
     {
-        std::cout << "DEBUGOUT: FOXTROT" << std::endl;
-      //const exprt &same_size = equal_exprt(object_size(left_ptr), object_size(right_ptr));
-
-        const exprt &compatible = same_offset;
-        //const exprt &compatible = binary_exprt(binary_exprt(same_objct, ID_and, same_offset), ID_and, same_size);
-      if(first_iter)
-      {
-          std::cout << "DEBUGOUT: GOLF" << std::endl;
-        running = compatible;
-        first_iter = false;
-      }
-      else
-      {
-          std::cout << "DEBUGOUT: HOTEL" << std::endl;
-        running = binary_exprt(running, ID_or, compatible);
-      }
+      running = binary_exprt(running, ID_or, compatible);
     }
-         */
   }
 
   return running;
@@ -634,76 +557,11 @@ void code_contractst::instrument_assn_statement(
       left_ptr = to_dereference_expr(lhs).pointer();
   }
 
-/*
-    const irep_idt func_id(func_name);
-    const symbolt &f_sym = ns.lookup(func_id);
-
-    typet cast_type = pointer_type(void_type());
-    cast_type.subtype().set(ID_C_constant, true);
-    // exprt cast_left = typecast_exprt(left_ptr, cast_type);
-    exprt cast_left = typecast_exprt(left_ptr, cast_type);
-    exprt left_offset = pointer_offset(cast_left);
-
-    symbolt standin_symbol = new_tmp_symbol(
-            left_offset.type(),
-            ins_it->source_location,
-            func_id,
-            f_sym.mode);
-    //symbolt standin_symbol(aux_symbol);
-    standin_symbol.is_auxiliary = false;
-    std::string s = "foo";
-    standin_symbol.name = dstringt(s + standin_symbol.name.c_str());
-
-    symbol_table.add(standin_symbol);
-    this->ns = namespacet(symbol_table);
-    symbol_exprt standin = standin_symbol.symbol_expr();
-
-    //symbol_tablet ns_st1 = this->ns.get_symbol_table();
-    //symbol_tablet ns_st2 = this->ns.get_other_symbol_table();
-    //ns_st1.add(standin_symbol);
-    //this->ns = namespacet(ns_st1, ns_st2);
-
-    std::cout << std::endl;
-    std::cout << "DEBUGOUT: Things in the symbol table:" << std::endl;
-    for(auto sym : symbol_table.symbols)
-    {
-        std::cout << sym.second.base_name << " : " << typeid(sym.second).name() << std::endl;
-    }
-    std::cout << std::endl;
-
-    std::cout << std::endl;
-    std::cout << "DEBUGOUT: Things in the namespace symbol table:" << std::endl;
-    for(auto sym : this->ns.get_symbol_table().symbols)
-    {
-        std::cout << sym.second.base_name << " : " << typeid(sym.second).name()  << std::endl;
-    }
-    std::cout << std::endl;
-    */
-
-
-  // exprt alias_expr = create_alias_expression(lhs, assigns_references);
-  //exprt alias_expr = create_alias_expression(standin, assigns_references);
-  std::cout << "DEBUGOUT: INSTRUMENTING ALIAS for lhs: " << std::endl << lhs.pretty() << std::endl;
-  std::cout << "DEBUGOUT: corresponding left_ptr: " << std::endl << left_ptr.pretty() << std::endl;
   exprt alias_expr = assigns_clause.alias_expression(lhs);
-
-  //exprt fanciful_alias = not_exprt(typecast_exprt(
-  //        typecast_exprt(not_exprt(binary_exprt(alias_expr, ID_notequal, constant_exprt(irep_idt(dstringt("0")), signed_long_int_type()))), signed_long_int_type()), signed_long_int_type()));
-
   exprt cast_alias = not_exprt(
           binary_predicate_exprt(typecast_exprt(typecast_exprt(not_exprt(alias_expr), signed_long_int_type()), signed_long_int_type()), ID_notequal, constant_exprt(irep_idt(dstringt("0")), signed_long_int_type())));
 
-
-  /*
-    std::cout << "DEBUGOUT: fanciful type - " << fanciful_alias.type().pretty() << std::endl;
-    std::cout << "DEBUGOUT: bool type - " << true_exprt().type().pretty() << std::endl;
-*/
-
   goto_programt alias_assertion;
-  /*
-  alias_assertion.add(goto_programt::make_decl(standin, f_sym.location));
-  alias_assertion.add(goto_programt::make_assignment(standin, left_offset, f_sym.location));
-   */
   alias_assertion.add(
     goto_programt::make_assertion(cast_alias, ins_it->source_location));
 
@@ -729,7 +587,6 @@ void code_contractst::instrument_call_statement(
   const irep_idt &called_name =
     to_symbol_expr(call.function()).get_identifier();
 
-  //const symbolt &f_sym = ns.lookup(func_id);
   if(std::strcmp(called_name.c_str(), "malloc") == 0)
   {
     // Make freshly allocated memory assignable, if we can determine its type.
@@ -742,29 +599,8 @@ void code_contractst::instrument_call_statement(
       {
         typet cast_type = rhs.type();
 
-        std::cout << "DEBUGOUT: BEFORE8" << std::endl;
         assigns_clause_targett *new_target = assigns_clause.add_pointer_target(rhs);
-        std::cout << "DEBUGOUT: AFTER8" << std::endl;
         goto_programt &pointer_capture = new_target->get_init_block();
-
-        /*
-        // Declare a new symbol to captured the result of malloc after cast.
-        symbol_exprt cast_capture = new_tmp_symbol(
-          cast_type,
-          f_sym.location,
-          func_id,
-          f_sym.mode).symbol_expr();
-
-        goto_programt pointer_capture = ; // TODO: grab this from the new pointer
-        pointer_capture.add(goto_programt::make_decl(cast_capture, f_sym.location));
-        pointer_capture.add(goto_programt::instructiont(code_assignt(cast_capture, rhs), f_sym.location, ASSIGN, nil_exprt(), {}));
-
-        // Allow future assignment LHSs to alias the cast symbol, and any
-        // constituent subcomponents (as in structs).
-        std::vector<exprt> top_ptr;
-        top_ptr.push_back(dereference_exprt(cast_capture));
-        populate_assigns_reference(top_ptr, f_sym, func_id, pointer_capture, aliasable_references);
-        */
 
         int lines_to_iterate = pointer_capture.instructions.size();
         program.insert_before_swap(local_ins_it, pointer_capture);
@@ -851,44 +687,16 @@ void code_contractst::instrument_call_statement(
         }
       }
 
-      std::cout << "DEBUGOUT: called_assigns before replace:" << std::endl << called_assigns.pretty() << std::endl;
       replace(called_assigns);
-      std::cout << "DEBUGOUT: called_assigns after replace:" << std::endl << called_assigns.pretty() << std::endl;
 
       // check compatibility of assigns clause with the called function
-      std::cout << "DEBUGOUT: BEFORE10" << std::endl;
       assigns_clauset called_assigns_clause(called_assigns, *this, func_id, log);
-      std::cout << "DEBUGOUT: AFTER10" << std::endl;
       exprt compat = assigns_clause.compatible_expression(called_assigns_clause);
       goto_programt alias_assertion;
       alias_assertion.add(
               goto_programt::make_assertion(compat, ins_it->source_location));
       program.insert_before_swap(ins_it, alias_assertion);
       ++ins_it;
-
-      /*
-      for(exprt::operandst::const_iterator called_op_it =
-            called_assigns.operands().begin();
-          called_op_it != called_assigns.operands().end();
-          called_op_it++)
-      {
-        if(called_op_it->id() == ID_symbol &&
-          freely_assignable_symbols.find(
-             to_symbol_expr(*called_op_it).get_identifier()) !=
-          freely_assignable_symbols.end())
-        {
-          continue;
-        }
-        exprt alias_expr =
-          create_alias_expression(*called_op_it, aliasable_references);
-
-        goto_programt alias_assertion;
-        alias_assertion.add(
-          goto_programt::make_assertion(alias_expr, ins_it->source_location));
-        program.insert_before_swap(ins_it, alias_assertion);
-        ++ins_it;
-      }
-       */
     }
   }
 }
@@ -966,9 +774,7 @@ bool code_contractst::add_pointer_checks(const std::string &func_name)
   const code_typet &type = to_code_type(f_sym.type);
 
   exprt assigns_expr = static_cast<const exprt &>(type.find(ID_C_spec_assigns));
-  std::cout << "DEBUGOUT: BEFORE2" << std::endl;
   assigns_clauset assigns(assigns_expr, *this, func_id, log);
-  std::cout << "DEBUGOUT: AFTER2" << std::endl;
   // Return if there are no reference checks to perform.
   if(assigns_expr.is_nil())
     return false;
@@ -977,23 +783,8 @@ bool code_contractst::add_pointer_checks(const std::string &func_name)
 
   // Create temporary variables to hold the assigns clause targets before they can be modified.
   goto_programt standin_decls = assigns.init_block(f_sym.location);
-  /*
-  std::vector<exprt> original_references;
-  populate_assigns_references(
-    f_sym, func_id, standin_decls, original_references);
-   */
 
-  //goto_programt &mark_dead = assigns.dead_stmts(f_sym.location, func_name, f_sym.mode);
-  /*
-  for(exprt temp_var : original_references)
-  {
-    if(temp_var.id() == ID_symbol)
-    {
-        std::cout << "DEBUGOUT: MAKING!" << std::endl;
-        mark_dead.add(goto_programt::make_dead(to_symbol_expr(temp_var), temp_var.source_location()));
-    }
-  }
-   */
+  goto_programt &mark_dead = assigns.dead_stmts(f_sym.location, func_name, f_sym.mode);
 
   // Create a list of variables that are okay to assign.
   std::set<dstringt> freely_assignable_symbols;
@@ -1005,7 +796,6 @@ bool code_contractst::add_pointer_checks(const std::string &func_name)
   int lines_to_iterate = standin_decls.instructions.size();
   program.insert_before_swap(ins_it, standin_decls);
   std::advance(ins_it, lines_to_iterate);
-  //program.compute_location_numbers(ins_it->location_number);
 
   if(check_for_looped_mallocs(program))
   {
@@ -1025,32 +815,16 @@ bool code_contractst::add_pointer_checks(const std::string &func_name)
     }
     else if(ins_it->is_function_call())
     {
-      std::cout << "DEBUGOUT: OUTSIDE23" << std::endl;
       instrument_call_statement(ins_it, program, assigns_expr, func_id, freely_assignable_symbols, assigns);
-      std::cout << "DEBUGOUT: OUTSIDE24" << std::endl;
     }
   }
-  std::cout << "DEBUGOUT: Done4" << std::endl;
 
   // walk the iterator back to the last statement
   while(!ins_it->is_end_function()) {std::advance(ins_it, -1);}
-  /*
-  while(ins_it != program.instructions.begin())
-  {
-    std::advance(ins_it, -1);
-    ins_it->is_end_function()
-    std::cout << "DEBUGOUT: instr - " << ins_it->to_string() << "(" << ins_it->code.id() << ")" << std::endl << ins_it->code.pretty() << std::endl;
-  }
-   */
-  // while(!ins_it->is_return()) {std::advance(ins_it, -1);}
-  std::cout << "DEBUGOUT: RETURN7" << std::endl;
-  /*
-   *
-    // Make sure the temporary symbols are marked dead
-    lines_to_iterate = mark_dead.instructions.size();
-    program.insert_before_swap(ins_it, mark_dead);
-    // std::advance(ins_it, lines_to_iterate);
-   */
+
+  // Make sure the temporary symbols are marked dead
+  lines_to_iterate = mark_dead.instructions.size();
+  program.insert_before_swap(ins_it, mark_dead);
 
   return false;
 }
@@ -1058,9 +832,7 @@ bool code_contractst::add_pointer_checks(const std::string &func_name)
 bool code_contractst::enforce_contract(const std::string &fun_to_enforce)
 {
   // Add statements to the source function to ensure assigns clause is respected.
-  std::cout << "DEBUGOUT: BEFORE1" << std::endl;
   add_pointer_checks(fun_to_enforce);
-  std::cout << "DEBUGOUT: AFTER1" << std::endl;
 
   // Rename source function
   std::stringstream ss;
@@ -1302,7 +1074,6 @@ bool code_contractst::replace_calls()
 
 bool code_contractst::enforce_contracts()
 {
-  std::cout << "DEBUGOUT: BEFORE02" << std::endl;
   std::set<std::string> funs_to_enforce;
   for(auto &goto_function : goto_functions.function_map)
   {
@@ -1315,7 +1086,6 @@ bool code_contractst::enforce_contracts()
 bool code_contractst::enforce_contracts(
   const std::set<std::string> &funs_to_enforce)
 {
-  std::cout << "DEBUGOUT: BEFORE01" << std::endl;
   bool fail = false;
   for(const auto &fun : funs_to_enforce)
   {
@@ -1342,14 +1112,12 @@ assigns_clause_scalar_targett::assigns_clause_scalar_targett(const exprt &obj_pt
 {
   const symbolt &f_sym = contract.get_namespace().lookup(func_id);
 
-  std::cout << "DEBUGOUT: BEFORE5" << std::endl << obj_pointer.pretty() << std::endl;
     // Declare a new symbol to stand in for the reference
     symbolt standin_symbol = contract.new_tmp_symbol(
             obj_pointer.type(),
             f_sym.location,
             func_id,
             f_sym.mode);
-  std::cout << "DEBUGOUT: AFTER5" << std::endl;
 
     local_standin_var = standin_symbol.symbol_expr();
 
