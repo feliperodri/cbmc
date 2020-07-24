@@ -283,36 +283,13 @@ bool code_contractst::apply_contract(
   // in the assigns clause.
   if(assigns.is_not_nil())
   {
-    assigns_clauset assigns_cause(assigns, *this, func_id, log); // TODO: Start here.
-    goto_programt assigns_havoc;
-    modifiest assigns_tgts;
-    if(assigns.has_operands())
-    {
-      exprt::operandst targets = assigns.operands();
-      for(exprt curr_op : targets)
-      {
-        if(curr_op.id() == ID_symbol ||
-          curr_op.id() == ID_dereference ||
-          curr_op.id() == ID_member ||
-          curr_op.id() == ID_ptrmember)
-        {
-          assigns_tgts.insert(curr_op);
-        }
-        else
-        {
-          log.error() << "Unable to apply assigns clause for expression of type '"
-                      << curr_op.id()
-                      << "'; not enforcing assigns clause."
-                      << messaget::eom;
-          return true;
-        }
-      }
-    }
-    build_havoc_code(target, assigns_tgts, assigns_havoc);
+    assigns_clauset assigns_cause(assigns, *this, func_id, log);
+    goto_programt assigns_havoc = assigns_cause.havoc_code(f_sym.location, func_id, f_sym.mode);
 
     // Insert the non-deterministic assignment immediately before the call site.
+    int lines_to_iterate = assigns_havoc.instructions.size();
     goto_program.insert_before_swap(target, assigns_havoc);
-    std::advance(target, assigns_tgts.size());
+    std::advance(target, lines_to_iterate);
   }
 
   // To remove the function call, replace it with an assumption statement
@@ -799,7 +776,7 @@ bool code_contractst::add_pointer_checks(const std::string &func_name)
   // Create temporary variables to hold the assigns clause targets before they can be modified.
   goto_programt standin_decls = assigns.init_block(f_sym.location);
 
-  goto_programt &mark_dead = assigns.dead_stmts(f_sym.location, func_name, f_sym.mode);
+  goto_programt mark_dead = assigns.dead_stmts(f_sym.location, func_name, f_sym.mode);
 
   // Create a list of variables that are okay to assign.
   std::set<dstringt> freely_assignable_symbols;
@@ -1169,6 +1146,20 @@ exprt assigns_clause_scalar_targett::compatible_expression(
     }
 }
 
+goto_programt assigns_clause_scalar_targett::havoc_code(source_locationt loc) const
+{
+  goto_programt assigns_havoc;
+
+  exprt lhs = dereference_exprt(obj_pointer);
+  side_effect_expr_nondett rhs(lhs.type(), loc);
+
+  goto_programt::targett t = assigns_havoc.add(goto_programt::make_assignment(
+    code_assignt(std::move(lhs), std::move(rhs)), loc));
+  t->code.add_source_location()=loc;
+
+  return assigns_havoc;
+}
+
 /*********************************************
  *  Assigns Clause Target - Struct
  ********************************************/
@@ -1319,6 +1310,20 @@ exprt assigns_clause_struct_targett::compatible_expression(
     }
 }
 
+goto_programt assigns_clause_struct_targett::havoc_code(source_locationt loc) const
+{
+  goto_programt assigns_havoc;
+
+  exprt lhs = dereference_exprt(obj_pointer);
+  side_effect_expr_nondett rhs(lhs.type(), loc);
+
+  goto_programt::targett t = assigns_havoc.add(goto_programt::make_assignment(
+    code_assignt(std::move(lhs), std::move(rhs)), loc));
+  t->code.add_source_location()=loc;
+
+  return assigns_havoc;
+}
+
 /*********************************************
  *  Assigns Clause Target - Array
  ********************************************/
@@ -1406,6 +1411,40 @@ std::vector<symbol_exprt> assigns_clause_array_targett::temporary_declarations()
     result.push_back(upper_offset_var);
 
     return result;
+}
+
+goto_programt assigns_clause_array_targett::havoc_code(source_locationt loc) const
+{
+  goto_programt assigns_havoc;
+
+  modifiest assigns_tgts;
+  //code_fort()
+  typet lower_type = lower_offset_var.type();
+  exprt array_type_size = get_size_or_throw(obj_pointer.type().subtype(), contract.get_namespace(), log);
+
+  for(int i = lower_bound; i<= upper_bound; ++i)
+  {
+    dstringt offset_string(std::to_string(i));
+    irep_idt offset_irep(offset_string);
+    constant_exprt val_const(offset_irep, lower_type);
+    dereference_exprt array_deref(plus_exprt(obj_pointer, typecast_exprt(val_const, signed_long_int_type())));
+
+    //exprt offset = typecast_exprt(mult_exprt(typecast_exprt(val_const, unsigned_long_int_type()), array_type_size), signed_int_type());
+    assigns_tgts.insert(array_deref);
+
+
+  }
+
+  for(auto lhs : assigns_tgts)
+  {
+    side_effect_expr_nondett rhs(lhs.type(), loc);
+
+    goto_programt::targett t = assigns_havoc.add(goto_programt::make_assignment(
+      code_assignt(std::move(lhs), std::move(rhs)), loc));
+    t->code.add_source_location()=loc;
+  }
+
+  return assigns_havoc;
 }
 
 exprt assigns_clause_array_targett::alias_expression(const exprt &ptr)
@@ -1516,19 +1555,30 @@ goto_programt& assigns_clauset::temporary_declarations(source_locationt loc, dst
     return standin_declarations;
 }
 
-goto_programt& assigns_clauset::dead_stmts(source_locationt loc, dstringt func_name, dstringt lang_mode)
+goto_programt assigns_clauset::dead_stmts(source_locationt loc, dstringt func_name, dstringt lang_mode)
 {
-    if(dead_statements.empty())
+  goto_programt dead_statements;
+  for(assigns_clause_targett *target : targets)
+  {
+    for(symbol_exprt sym : target->temporary_declarations())
     {
-        for(assigns_clause_targett *target : targets)
-        {
-            for(symbol_exprt sym : target->temporary_declarations())
-            {
-                dead_statements.add(goto_programt::make_dead(sym, sym.source_location()));
-            }
-        }
+      dead_statements.add(goto_programt::make_dead(sym, sym.source_location()));
     }
-    return dead_statements;
+  }
+  return dead_statements;
+}
+
+goto_programt assigns_clauset::havoc_code(source_locationt loc, dstringt func_name, dstringt lang_mode)
+{
+  goto_programt havoc_statements;
+  for(assigns_clause_targett *target : targets)
+  {
+    for(goto_programt::instructiont ins : target->havoc_code(loc).instructions)
+    {
+      havoc_statements.add(std::move(ins));
+    }
+  }
+  return havoc_statements;
 }
 
 exprt assigns_clauset::alias_expression(const exprt &lhs)

@@ -229,6 +229,7 @@ public:
     virtual std::vector<symbol_exprt> temporary_declarations() const = 0;
     virtual exprt alias_expression(const exprt &lhs) = 0;
     virtual exprt compatible_expression(const assigns_clause_targett &called_target) = 0;
+    virtual goto_programt havoc_code(source_locationt loc) const = 0;
 
     const exprt &get_direct_pointer() const
     {
@@ -271,6 +272,7 @@ public:
     std::vector<symbol_exprt> temporary_declarations() const;
     exprt alias_expression(const exprt &lhs);
     exprt compatible_expression(const assigns_clause_targett &called_target);
+    goto_programt havoc_code(source_locationt loc) const;
 
 protected:
   symbol_exprt local_standin_var;
@@ -287,6 +289,7 @@ public:
     std::vector<symbol_exprt> temporary_declarations() const;
     exprt alias_expression(const exprt &lhs);
     exprt compatible_expression(const assigns_clause_targett &called_target);
+    goto_programt havoc_code(source_locationt loc) const;
 
 protected:
     symbol_exprt main_struct_standin;
@@ -304,6 +307,7 @@ public:
     std::vector<symbol_exprt> temporary_declarations() const;
     exprt alias_expression(const exprt &lhs);
     exprt compatible_expression(const assigns_clause_targett &called_target);
+    goto_programt havoc_code(source_locationt loc) const;
 
 protected:
     int lower_bound;
@@ -324,11 +328,12 @@ public:
                     const irep_idt f_id, messaget log_param);
     ~assigns_clauset();
 
-  assigns_clause_targett* add_target(exprt curr_op);
-  assigns_clause_targett* add_pointer_target(exprt curr_op);
+    assigns_clause_targett* add_target(exprt curr_op);
+    assigns_clause_targett* add_pointer_target(exprt curr_op);
     goto_programt init_block(source_locationt loc);
     goto_programt &temporary_declarations(source_locationt loc, dstringt func_name, dstringt lang_mode);
-    goto_programt &dead_stmts(source_locationt loc, dstringt func_name, dstringt lang_mode);
+    goto_programt dead_stmts(source_locationt loc, dstringt func_name, dstringt lang_mode);
+    goto_programt havoc_code(source_locationt loc, dstringt func_name, dstringt lang_mode);
     exprt alias_expression(const exprt &lhs);
 
     exprt compatible_expression(const assigns_clauset &called_assigns);
@@ -338,7 +343,6 @@ protected:
 
     std::vector<assigns_clause_targett*> targets;
     goto_programt standin_declarations;
-    goto_programt dead_statements;
 
     code_contractst &parent;
     const irep_idt func_id;
