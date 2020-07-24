@@ -101,6 +101,7 @@ extern char *yyansi_ctext;
 %token TOK_NE        "!="
 %token TOK_ANDAND    "&&"
 %token TOK_OROR      "||"
+%token TOK_RANGE     ".."
 %token TOK_ELLIPSIS  "..."
 
 /*** modifying assignment operators ***/
@@ -205,6 +206,7 @@ extern char *yyansi_ctext;
 %token TOK_CPROVER_REQUIRES  "__CPROVER_requires"
 %token TOK_CPROVER_ENSURES  "__CPROVER_ensures"
 %token TOK_CPROVER_ASSIGNS "__CPROVER_assigns"
+%token TOK_NOTHING "__CPROVER_nothing"
 %token TOK_IMPLIES     "==>"
 %token TOK_EQUIVALENT  "<==>"
 %token TOK_XORXOR      "^^"
@@ -515,7 +517,9 @@ assigns_opt:
         ;
 
 target_list:
-          target
+          TOK_NOTHING
+        { init($$, ID_target_list);}
+        | target
         {
           init($$, ID_target_list);
           mto($$, $1);
@@ -528,8 +532,26 @@ target_list:
         ;
 
 target:
+         deref_target
+        | target '[' integer ']'
+        { binary($$, $1, $2, ID_index, $3); }
+        | target '[' range ']'
+        { binary($$, $1, $2, ID_array_range, $3); }
+        ;
+
+range:
+        integer ',' integer
+        {
+          $$=$2;
+          set($$, ID_int_range);
+          mto($$, $1);
+          mto($$, $3);
+        }
+        ;
+
+deref_target:
          member_target
-        | '*' target
+        | '*' deref_target
         {
           $$=$1;
           set($$, ID_dereference);

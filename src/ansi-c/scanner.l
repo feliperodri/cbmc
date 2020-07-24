@@ -1278,6 +1278,7 @@ __decltype          { if(PARSER.cpp98 &&
 {CPROVER_PREFIX}"requires"     { loc(); return TOK_CPROVER_REQUIRES; }
 {CPROVER_PREFIX}"ensures"      { loc(); return TOK_CPROVER_ENSURES; }
 {CPROVER_PREFIX}"assigns"      { loc(); return TOK_CPROVER_ASSIGNS; }
+{CPROVER_PREFIX}"nothing"      { loc(); return TOK_NOTHING; }
 
 "\xe2\x88\x80" |
 "\\forall"      { /* Non-standard, obviously. Found in ACSL syntax. */
@@ -1505,6 +1506,7 @@ __decltype          { if(PARSER.cpp98 &&
 "&&"            { loc(); return TOK_ANDAND; }
 "||"            { loc(); return TOK_OROR; }
 "..."           { loc(); return TOK_ELLIPSIS; }
+".."            { loc(); return TOK_RANGE; }
 
 "*="            { loc(); return TOK_MULTASSIGN; }
 "/="            { loc(); return TOK_DIVASSIGN; }

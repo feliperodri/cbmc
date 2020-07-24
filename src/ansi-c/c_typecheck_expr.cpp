@@ -473,11 +473,50 @@ void c_typecheck_baset::typecheck_expr_main(exprt &expr)
   else if(expr.id()==ID_C_spec_assigns ||
           expr.id()==ID_target_list)
   {
-    // already type checked
+      // already type checked
+  }
+  else if(expr.id()==ID_int_range)
+  {
+      exprt &lower = expr.op0();
+      exprt &upper = expr.op1();
+
+      if(!lower.is_constant())
+      {
+          error().source_location = expr.source_location();
+          error() << "Lower bound of range is not a constant: " << lower.pretty()
+                  << eom;
+          throw 0;
+      }
+
+      if(!upper.is_constant())
+      {
+          error().source_location = expr.source_location();
+          error() << "Upper bound of range is not a constant: " << upper.pretty()
+                  << eom;
+          throw 0;
+      }
+
+      int lowerbase = std::stoi(to_constant_expr(lower).get(ID_C_base).c_str(), nullptr, 10);
+      int lowerval = std::stoi(to_constant_expr(lower).get_value().c_str(), nullptr, lowerbase);
+      int upperbase = std::stoi(to_constant_expr(upper).get(ID_C_base).c_str(), nullptr, 10);
+      int upperval = std::stoi(to_constant_expr(upper).get_value().c_str(), nullptr, upperbase);
+
+      if(lowerval > upperval)
+      {
+          error().source_location = expr.source_location();
+          error() << "Lower bound of range " << lowerval
+                  << " is greater than upper bound " << upperval
+                  << eom;
+          throw 0;
+      }
+  }
+  else if(expr.id()==ID_array_range)
+  {
+      // already type checked
   }
   else
   {
-    error().source_location = expr.source_location();
+      error().source_location = expr.source_location();
     error() << "expression categorized improperly during parsing: " << expr.pretty() << eom;
     throw 0;
   }
