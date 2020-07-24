@@ -181,7 +181,7 @@ protected:
   bool has_contract(const irep_idt);
 
   bool
-  apply_contract(goto_programt &goto_program, goto_programt::targett target);
+  apply_contract(const irep_idt &func_id, goto_programt &goto_program, goto_programt::targett target);
 
   void
   add_contract_check(const irep_idt &, const irep_idt &, goto_programt &dest);

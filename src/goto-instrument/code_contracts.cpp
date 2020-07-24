@@ -178,6 +178,7 @@ bool code_contractst::has_contract(const irep_idt fun_name)
 }
 
 bool code_contractst::apply_contract(
+  const irep_idt &func_id,
   goto_programt &goto_program,
   goto_programt::targett target)
 {
@@ -282,6 +283,7 @@ bool code_contractst::apply_contract(
   // in the assigns clause.
   if(assigns.is_not_nil())
   {
+    assigns_clauset assigns_cause(assigns, *this, func_id, log); // TODO: Start here.
     goto_programt assigns_havoc;
     modifiest assigns_tgts;
     if(assigns.has_operands())
@@ -349,8 +351,22 @@ void code_contractst::code_contracts(
 
   // look at all function calls
   Forall_goto_program_instructions(ins, goto_function.body)
+  {
     if(ins->is_function_call())
-      apply_contract(goto_function.body, ins);
+    {
+      const code_function_callt &call = ins->get_function_call();
+
+      // TODO we don't handle function pointers
+      if(call.function().id() == ID_symbol)
+      {
+        const irep_idt &fun_name =
+          to_symbol_expr(call.function()).get_identifier();
+
+        apply_contract(fun_name, goto_function.body, ins);
+
+      }
+    }
+  }
 }
 
 const symbolt &code_contractst::new_tmp_symbol(
@@ -415,7 +431,6 @@ void code_contractst::populate_assigns_reference(
     if(curr_op.id() == ID_array_range)
     {
         exprt &arr = curr_op.op0();
-
         exprt &range = curr_op.op1();
 
         exprt &lower = range.op0();
@@ -1045,7 +1060,8 @@ bool code_contractst::replace_calls(
         if(found == funs_to_replace.end())
           continue;
 
-        fail |= apply_contract(goto_function.second.body, ins);
+
+        fail |= apply_contract(fun_name, goto_function.second.body, ins);
       }
     }
   }
