@@ -389,7 +389,7 @@ exprt code_contractst::create_alias_expression(
     }
     else
     {
-      running = binary_exprt(running, ID_or, compatible);
+      running = or_exprt(running, compatible);
     }
   }
 
@@ -535,7 +535,15 @@ void code_contractst::instrument_assn_statement(
     ins_it->is_assign(),
     "The first argument of instrument_assn_statement should always be"
     " an assignment");
+
   const exprt &lhs = ins_it->get_assign().lhs();
+  std::cout << "DEBUGOUT: Checking freely assignable for..." << std::endl << lhs.pretty() << std::endl;
+  std::cout << "DEBUGOUT: IN..." << std::endl;
+  for(auto sy : freely_assignable_symbols)
+  {
+    std::cout << "DEBUGOUT: " << sy.c_str() << std::endl;
+  }
+
   if(lhs.id() == ID_symbol &&
      freely_assignable_symbols.find(to_symbol_expr(lhs).get_identifier())
      != freely_assignable_symbols.end())
@@ -775,7 +783,6 @@ bool code_contractst::add_pointer_checks(const std::string &func_name)
 
   // Create temporary variables to hold the assigns clause targets before they can be modified.
   goto_programt standin_decls = assigns.init_block(f_sym.location);
-
   goto_programt mark_dead = assigns.dead_stmts(f_sym.location, func_name, f_sym.mode);
 
   // Create a list of variables that are okay to assign.
@@ -797,9 +804,22 @@ bool code_contractst::add_pointer_checks(const std::string &func_name)
   // Insert aliasing assertions
   for(; ins_it != program.instructions.end(); std::advance(ins_it, 1))
   {
+    std::cout << "DEBUGOUT: INSTRUMENTING - " << std::endl << ins_it->type << std::endl;
+
     if(ins_it->is_decl())
     {
+      std::cout << "DEBUGOUT: ADDING FREELY - " << ins_it->get_decl().symbol().get_identifier() << std::endl;
       freely_assignable_symbols.insert(ins_it->get_decl().symbol().get_identifier());
+
+      assigns_clause_targett *new_target = assigns.add_target(ins_it->get_decl().symbol());
+      goto_programt &pointer_capture = new_target->get_init_block();
+
+      lines_to_iterate = pointer_capture.instructions.size();
+      for(auto in : pointer_capture.instructions)
+      {
+        program.insert_after(ins_it, in);
+        std::advance(ins_it, 1);
+      }
     }
     else if(ins_it->is_assign())
     {
@@ -924,10 +944,12 @@ void code_contractst::add_contract_check(
   goto_programt check;
 
   // if(nondet)
+  /* DEBUGOUT
   check.add(goto_programt::make_goto(
     skip,
     side_effect_expr_nondett(bool_typet(), skip->source_location),
     skip->source_location));
+   */
 
   // prepare function call including all declarations
   const symbolt &function_symbol = ns.lookup(mangled_fun);
@@ -935,6 +957,7 @@ void code_contractst::add_contract_check(
   replace_symbolt replace;
 
   // decl ret
+  code_returnt return_stmt;
   if(gf.type.return_type()!=empty_typet())
   {
     symbol_exprt r = new_tmp_symbol(
@@ -946,6 +969,7 @@ void code_contractst::add_contract_check(
     check.add(goto_programt::make_decl(r, skip->source_location));
 
     call.lhs()=r;
+    return_stmt = code_returnt(r);
 
     symbol_exprt ret_val(CPROVER_PREFIX "return_value", call.lhs().type());
     replace.insert(ret_val, r);
@@ -964,6 +988,8 @@ void code_contractst::add_contract_check(
                        parameter_symbol.mode)
                        .symbol_expr();
     check.add(goto_programt::make_decl(p, skip->source_location));
+    // DEBUGOUT
+    check.add(goto_programt::make_assignment(p, parameter_symbol.symbol_expr(), skip->source_location));
 
     call.arguments().push_back(p);
 
@@ -993,6 +1019,12 @@ void code_contractst::add_contract_check(
   {
     check.add(
       goto_programt::make_assertion(ensures_cond, ensures.source_location()));
+  }
+
+  // DEBUGOUT
+  if(gf.type.return_type()!=empty_typet())
+  {
+    check.add(goto_programt::make_return(return_stmt, skip->source_location));
   }
 
   // prepend the new code to dest
@@ -1263,7 +1295,7 @@ exprt assigns_clause_struct_targett::alias_expression(const exprt &ptr)
             exprt same_offset = equal_exprt(pointer_offset(ptr), pointer_offset(sym));
 
             const exprt &compatible
-                    = binary_exprt(same_obj, ID_and, same_offset);
+                    = and_exprt(same_obj, same_offset);
             if(first_iter)
             {
                 running = compatible;
@@ -1271,7 +1303,7 @@ exprt assigns_clause_struct_targett::alias_expression(const exprt &ptr)
             }
             else
             {
-                running = binary_exprt(running, ID_or, compatible);
+                running = or_exprt(running, compatible);
             }
         }
     }
@@ -1298,11 +1330,11 @@ exprt assigns_clause_struct_targett::compatible_expression(
         exprt called_size = get_size_or_throw(struct_target.obj_pointer.type(), contract.get_namespace(), log);
         exprt called_upper_offset = pointer_offset(plus_exprt(struct_target.obj_pointer, called_size));
 
-        exprt in_range_lower = binary_exprt(pointer_offset(struct_target.obj_pointer), ID_ge, pointer_offset(this->main_struct_standin));
-        exprt in_range_upper = binary_exprt(curr_upper_offset, ID_ge, called_upper_offset);
+        exprt in_range_lower = binary_predicate_exprt(pointer_offset(struct_target.obj_pointer), ID_ge, pointer_offset(this->main_struct_standin));
+        exprt in_range_upper = binary_predicate_exprt(curr_upper_offset, ID_ge, called_upper_offset);
 
-        exprt in_range = binary_exprt(in_range_lower, ID_and, in_range_upper);
-        return binary_exprt(same_obj, ID_and, in_range);
+        exprt in_range = and_exprt(in_range_lower, in_range_upper);
+        return and_exprt(same_obj, in_range);
     }
     else // Array
     {
@@ -1328,79 +1360,78 @@ goto_programt assigns_clause_struct_targett::havoc_code(source_locationt loc) co
  *  Assigns Clause Target - Array
  ********************************************/
 assigns_clause_array_targett::assigns_clause_array_targett(const exprt &obj_ptr, const code_contractst &contr, messaget &log_param, const irep_idt &func_id) :
-        assigns_clause_targett(Array, pointer_for(obj_ptr), contr, log_param), arr_standin_var(typet()), lower_offset_var(typet()), upper_offset_var(typet())
+        assigns_clause_targett(Array, obj_ptr.op0(), contr, log_param), arr_standin_var(typet()), lower_offset_var(typet()), upper_offset_var(typet())
 {
   const exprt &arr = obj_ptr.op0();
-    const exprt &range = obj_ptr.op1();
+  const exprt &range = obj_ptr.op1();
 
-    const exprt &lower_op = range.op0();
-    const exprt &upper_op = range.op1();
+  const exprt &lower_op = range.op0();
+  const exprt &upper_op = range.op1();
 
-    int lowerbase = std::stoi(to_constant_expr(lower_op).get(ID_C_base).c_str(), nullptr, 10);
-    int upperbase = std::stoi(to_constant_expr(upper_op).get(ID_C_base).c_str(), nullptr, 10);
-    lower_bound = std::stoi(to_constant_expr(lower_op).get_value().c_str(), nullptr, lowerbase);
-    upper_bound = std::stoi(to_constant_expr(upper_op).get_value().c_str(), nullptr, upperbase);
+  int lowerbase = std::stoi(to_constant_expr(lower_op).get(ID_C_base).c_str(), nullptr, 10);
+  int upperbase = std::stoi(to_constant_expr(upper_op).get(ID_C_base).c_str(), nullptr, 10);
+  lower_bound = std::stoi(to_constant_expr(lower_op).get_value().c_str(), nullptr, lowerbase);
+  upper_bound = std::stoi(to_constant_expr(upper_op).get_value().c_str(), nullptr, upperbase);
 
-    const symbolt &f_sym = contract.get_namespace().lookup(func_id);
-    exprt op_addr = pointer_for(obj_ptr);
+  const symbolt &f_sym = contract.get_namespace().lookup(func_id);
 
-    // Declare a new symbol to stand in for the reference
-    symbolt standin_symbol = contract.new_tmp_symbol(
-      obj_pointer.type(),
-            f_sym.location,
-            func_id,
-            f_sym.mode);
+  // Declare a new symbol to stand in for the reference
+  symbolt standin_symbol = contract.new_tmp_symbol(
+          obj_pointer.type(),
+          f_sym.location,
+          func_id,
+          f_sym.mode);
 
-    arr_standin_var = standin_symbol.symbol_expr();
+  arr_standin_var = standin_symbol.symbol_expr();
 
-    // Add array temp to variable initialization block
-    init_block.add(goto_programt::make_decl(arr_standin_var, f_sym.location));
-    init_block.add(goto_programt::make_assignment(
-            code_assignt(arr_standin_var, obj_pointer), f_sym.location));
-
-
-    dstringt lower_const_string(std::to_string(lower_bound));
-    irep_idt lower_const_irep(lower_const_string);
-    constant_exprt lower_val_const(lower_const_irep, lower_op.type());
-
-    exprt lower_constant_size = get_size_or_throw(arr.type().subtype(), contract.get_namespace(), log);
-    exprt lower_offset = typecast_exprt(mult_exprt(typecast_exprt(lower_val_const, unsigned_long_int_type()), lower_constant_size), signed_int_type());
-
-    // Declare a new symbol to stand in for the reference
-    symbolt lower_standin_symbol = contract.new_tmp_symbol(
-            lower_offset.type(),
-            f_sym.location,
-            func_id,
-            f_sym.mode);
-
-    lower_offset_var = lower_standin_symbol.symbol_expr();
-
-    // Add array temp to variable initialization block
-    init_block.add(goto_programt::make_decl(lower_offset_var, f_sym.location));
-    init_block.add(goto_programt::make_assignment(
-            code_assignt(lower_offset_var, lower_offset), f_sym.location));
+  // Add array temp to variable initialization block
+  init_block.add(goto_programt::make_decl(arr_standin_var, f_sym.location));
+  init_block.add(goto_programt::make_assignment(
+          code_assignt(arr_standin_var, obj_pointer), f_sym.location));
 
 
-    dstringt upper_const_string(std::to_string(upper_bound));
-    irep_idt upper_const_irep(upper_const_string);
-    constant_exprt upper_val_const(upper_const_irep, upper_op.type());
+  dstringt lower_const_string(std::to_string(lower_bound));
+  irep_idt lower_const_irep(lower_const_string);
+  constant_exprt lower_val_const(lower_const_irep, lower_op.type());
 
-    exprt upper_constant_size = get_size_or_throw(arr.type().subtype(), contract.get_namespace(), log);
-    exprt upper_offset = typecast_exprt(mult_exprt(typecast_exprt(upper_val_const, unsigned_long_int_type()), upper_constant_size), signed_int_type());
+  exprt lower_constant_size = get_size_or_throw(arr.type().subtype(), contract.get_namespace(), log);
+  exprt lower_offset = typecast_exprt(mult_exprt(typecast_exprt(lower_val_const, unsigned_long_int_type()), lower_constant_size), signed_int_type());
 
-    // Declare a new symbol to stand in for the reference
-    symbolt upper_standin_symbol = contract.new_tmp_symbol(
-            upper_offset.type(),
-            f_sym.location,
-            func_id,
-            f_sym.mode);
+  // Declare a new symbol to stand in for the reference
+  symbolt lower_standin_symbol = contract.new_tmp_symbol(
+          lower_offset.type(),
+          f_sym.location,
+          func_id,
+          f_sym.mode);
 
-    upper_offset_var = upper_standin_symbol.symbol_expr();
+  lower_offset_var = lower_standin_symbol.symbol_expr();
 
-    // Add array temp to variable initialization block
-    init_block.add(goto_programt::make_decl(upper_offset_var, f_sym.location));
-    init_block.add(goto_programt::make_assignment(
-            code_assignt(upper_offset_var, upper_offset), f_sym.location));
+  // Add array temp to variable initialization block
+  init_block.add(goto_programt::make_decl(lower_offset_var, f_sym.location));
+  init_block.add(goto_programt::make_assignment(
+          code_assignt(lower_offset_var, lower_offset), f_sym.location));
+
+
+  dstringt upper_const_string(std::to_string(upper_bound));
+  irep_idt upper_const_irep(upper_const_string);
+  constant_exprt upper_val_const(upper_const_irep, upper_op.type());
+
+  exprt upper_constant_size = get_size_or_throw(arr.type().subtype(), contract.get_namespace(), log);
+  exprt upper_offset = typecast_exprt(mult_exprt(typecast_exprt(upper_val_const, unsigned_long_int_type()), upper_constant_size), signed_int_type());
+
+  // Declare a new symbol to stand in for the reference
+  symbolt upper_standin_symbol = contract.new_tmp_symbol(
+          upper_offset.type(),
+          f_sym.location,
+          func_id,
+          f_sym.mode);
+
+  upper_offset_var = upper_standin_symbol.symbol_expr();
+
+  // Add array temp to variable initialization block
+  init_block.add(goto_programt::make_decl(upper_offset_var, f_sym.location));
+  init_block.add(goto_programt::make_assignment(
+          code_assignt(upper_offset_var, upper_offset), f_sym.location));
 }
 
 std::vector<symbol_exprt> assigns_clause_array_targett::temporary_declarations() const
@@ -1449,13 +1480,15 @@ goto_programt assigns_clause_array_targett::havoc_code(source_locationt loc) con
 
 exprt assigns_clause_array_targett::alias_expression(const exprt &ptr)
 {
+  exprt same_obj = same_object(ptr, arr_standin_var);
+  exprt ptr_offset = pointer_offset(ptr);
 
-    exprt same_obj = same_object(ptr, arr_standin_var);
-    exprt in_range_lower = binary_exprt(pointer_offset(ptr), ID_ge, pointer_offset(lower_offset_var));
-    exprt in_range_upper = binary_exprt(pointer_offset(upper_offset_var), ID_ge, pointer_offset(ptr));
-    exprt in_range = binary_exprt(in_range_lower, ID_and, in_range_upper);
+  exprt in_range_lower = binary_predicate_exprt(ptr_offset, ID_ge, typecast_exprt(lower_offset_var, ptr_offset.type()));
+  exprt in_range_upper = binary_predicate_exprt(typecast_exprt(upper_offset_var, ptr_offset.type()), ID_ge, ptr_offset);
+  exprt in_range = and_exprt(in_range_lower, in_range_upper);
 
-    return binary_exprt(same_obj, ID_and, in_range);
+  // Troublesome
+  return and_exprt(same_obj, in_range);
 }
 
 exprt assigns_clause_array_targett::compatible_expression(
@@ -1470,10 +1503,10 @@ exprt assigns_clause_array_targett::compatible_expression(
         const assigns_clause_array_targett &array_target
                 = static_cast<const assigns_clause_array_targett &>(called_target);
         exprt same_obj = same_object(this->arr_standin_var, array_target.arr_standin_var);
-        exprt in_range_lower = binary_exprt(array_target.lower_offset_var, ID_ge, this->lower_offset_var);
-        exprt in_range_upper = binary_exprt(this->upper_offset_var, ID_ge, array_target.upper_offset_var);
-        exprt in_range = binary_exprt(in_range_lower, ID_and, in_range_upper);
-        return binary_exprt(same_obj, ID_and, in_range);
+        exprt in_range_lower = binary_predicate_exprt(array_target.lower_offset_var, ID_ge, this->lower_offset_var);
+        exprt in_range_upper = binary_predicate_exprt(this->upper_offset_var, ID_ge, array_target.upper_offset_var);
+        exprt in_range = and_exprt(in_range_lower, in_range_upper);
+        return and_exprt(same_obj, in_range);
     }
     else // Struct
     {
@@ -1601,7 +1634,7 @@ exprt assigns_clauset::alias_expression(const exprt &lhs)
         }
         else
         {
-            result = binary_exprt(result, ID_or, target->alias_expression(left_ptr));
+            result = or_exprt(result, target->alias_expression(left_ptr));
         }
     }
     return result;
@@ -1630,7 +1663,7 @@ exprt assigns_clauset::compatible_expression(const assigns_clauset &called_assig
             }
             else
             {
-                curr_tgt_compat = binary_exprt(curr_tgt_compat, ID_or, target->compatible_expression(*called_target));
+                curr_tgt_compat = or_exprt(curr_tgt_compat, target->compatible_expression(*called_target));
             }
         }
         if(first_clause)
@@ -1640,7 +1673,7 @@ exprt assigns_clauset::compatible_expression(const assigns_clauset &called_assig
         }
         else
         {
-            result = binary_exprt(result, ID_and, curr_tgt_compat);
+            result = and_exprt(result, curr_tgt_compat);
         }
     }
 
