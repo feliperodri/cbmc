@@ -206,7 +206,8 @@ extern char *yyansi_ctext;
 %token TOK_CPROVER_REQUIRES  "__CPROVER_requires"
 %token TOK_CPROVER_ENSURES  "__CPROVER_ensures"
 %token TOK_CPROVER_ASSIGNS "__CPROVER_assigns"
-%token TOK_NOTHING "__CPROVER_nothing"
+%token TOK_CPROVER_NOTHING "__CPROVER_nothing"
+%token TOK_CPROVER_OLD "__CPROVER_old"
 %token TOK_IMPLIES     "==>"
 %token TOK_EQUIVALENT  "<==>"
 %token TOK_XORXOR      "^^"
@@ -333,6 +334,13 @@ constant: integer
 
 primary_expression:
           identifier
+        | TOK_CPROVER_OLD '(' identifier ')'
+        {
+          $$=$3; // this modifier does nothing for now
+          /*$$=$1;
+          set($$, ID_old);
+          mto($$, $3);*/
+        }
         | constant
         | '(' comma_expression ')'
         { $$ = $2; }
@@ -517,7 +525,7 @@ assigns_opt:
         ;
 
 target_list:
-          TOK_NOTHING
+          TOK_CPROVER_NOTHING
         { init($$, ID_target_list);}
         | target
         {
@@ -533,14 +541,19 @@ target_list:
 
 target:
          deref_target
-        | target '[' integer ']'
-        { binary($$, $1, $2, ID_index, $3); }
-        | target '[' range ']'
+        | target '[' array_index ']'
+        { binary($$, $1, $2, ID_array_range, $3); }
+        | target '[' array_range ']'
         { binary($$, $1, $2, ID_array_range, $3); }
         ;
 
-range:
-        integer ',' integer
+array_index:
+          identifier
+        | integer
+        ;
+
+array_range:
+        array_index ',' array_index
         {
           $$=$2;
           set($$, ID_int_range);

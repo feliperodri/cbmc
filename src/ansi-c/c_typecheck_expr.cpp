@@ -12,6 +12,7 @@ Author: Daniel Kroening, kroening@kroening.com
 #include "c_typecheck_base.h"
 
 #include <cassert>
+#include <iostream>
 #include <sstream>
 
 #include <util/arith_tools.h>
@@ -477,38 +478,36 @@ void c_typecheck_baset::typecheck_expr_main(exprt &expr)
   }
   else if(expr.id()==ID_int_range)
   {
+    // already type checked
       exprt &lower = expr.op0();
       exprt &upper = expr.op1();
 
-      if(!lower.is_constant())
+    if(lower.id() == ID_constant || lower.id() == ID_identifier)
+    {
+      dstringt c_type = lower.type().get(ID_C_c_type);
+      if(strcmp(c_type.c_str(), ID_signed_int.c_str()) != 0 &&
+         strcmp(c_type.c_str(), ID_unsigned_int.c_str()) != 0)
       {
-          error().source_location = expr.source_location();
-          error() << "Lower bound of range is not a constant: " << lower.pretty()
-                  << eom;
-          throw 0;
+        error().source_location = expr.source_location();
+        // error() << "Lower bound of range should be an integer, but got: " << lower.pretty()
+        error() << "Lower bound of range should be an integer, but got: " << lower.type().pretty()
+                << eom;
+        throw 0;
       }
+    }
 
-      if(!upper.is_constant())
+    if(upper.id() == ID_constant || upper.id() == ID_identifier)
+    {
+      dstringt u_type = upper.type().get(ID_C_c_type);
+      if(strcmp(u_type.c_str(), ID_signed_int.c_str()) != 0 &&
+         strcmp(u_type.c_str(), ID_unsigned_int.c_str()) != 0)
       {
-          error().source_location = expr.source_location();
-          error() << "Upper bound of range is not a constant: " << upper.pretty()
-                  << eom;
-          throw 0;
+        error().source_location = expr.source_location();
+        error() << "Upper bound of range should be an integer, but got: " << upper.pretty()
+                << eom;
+        throw 0;
       }
-
-      int lowerbase = std::stoi(to_constant_expr(lower).get(ID_C_base).c_str(), nullptr, 10);
-      int lowerval = std::stoi(to_constant_expr(lower).get_value().c_str(), nullptr, lowerbase);
-      int upperbase = std::stoi(to_constant_expr(upper).get(ID_C_base).c_str(), nullptr, 10);
-      int upperval = std::stoi(to_constant_expr(upper).get_value().c_str(), nullptr, upperbase);
-
-      if(lowerval > upperval)
-      {
-          error().source_location = expr.source_location();
-          error() << "Lower bound of range " << lowerval
-                  << " is greater than upper bound " << upperval
-                  << eom;
-          throw 0;
-      }
+    }
   }
   else if(expr.id()==ID_array_range)
   {

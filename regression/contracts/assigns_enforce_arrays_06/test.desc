@@ -1,0 +1,9 @@
+CORE
+main.c
+--enforce-all-contracts
+^EXIT=10$
+^SIGNAL=0$
+^VERIFICATION FAILED$
+--
+--
+This test checks that verification fails when an array is assigned at an index above its allowed index.

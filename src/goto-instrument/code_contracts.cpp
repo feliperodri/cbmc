@@ -1360,18 +1360,14 @@ goto_programt assigns_clause_struct_targett::havoc_code(source_locationt loc) co
  *  Assigns Clause Target - Array
  ********************************************/
 assigns_clause_array_targett::assigns_clause_array_targett(const exprt &obj_ptr, const code_contractst &contr, messaget &log_param, const irep_idt &func_id) :
-        assigns_clause_targett(Array, obj_ptr.op0(), contr, log_param), arr_standin_var(typet()), lower_offset_var(typet()), upper_offset_var(typet())
+        assigns_clause_targett(Array, obj_ptr.op0(), contr, log_param),lower_offset_obj(), upper_offset_obj(), arr_standin_var(typet()), lower_offset_var(typet()), upper_offset_var(typet())
 {
   const exprt &arr = obj_ptr.op0();
   const exprt &range = obj_ptr.op1();
 
-  const exprt &lower_op = range.op0();
-  const exprt &upper_op = range.op1();
-
-  int lowerbase = std::stoi(to_constant_expr(lower_op).get(ID_C_base).c_str(), nullptr, 10);
-  int upperbase = std::stoi(to_constant_expr(upper_op).get(ID_C_base).c_str(), nullptr, 10);
-  lower_bound = std::stoi(to_constant_expr(lower_op).get_value().c_str(), nullptr, lowerbase);
-  upper_bound = std::stoi(to_constant_expr(upper_op).get_value().c_str(), nullptr, upperbase);
+  // If the range doesn't have operands, it is just a single value
+  const exprt &lower_op = range.has_operands() ? range.op0() : range;
+  const exprt &upper_op = range.has_operands() ? range.op1() : range;
 
   const symbolt &f_sym = contract.get_namespace().lookup(func_id);
 
@@ -1389,49 +1385,97 @@ assigns_clause_array_targett::assigns_clause_array_targett(const exprt &obj_ptr,
   init_block.add(goto_programt::make_assignment(
           code_assignt(arr_standin_var, obj_pointer), f_sym.location));
 
+  if(lower_op.id() == ID_constant)
+  {
+    int lowerbase = std::stoi(to_constant_expr(lower_op).get(ID_C_base).c_str(), nullptr, 10);
+    lower_bound = std::stoi(to_constant_expr(lower_op).get_value().c_str(), nullptr, lowerbase);
 
-  dstringt lower_const_string(std::to_string(lower_bound));
-  irep_idt lower_const_irep(lower_const_string);
-  constant_exprt lower_val_const(lower_const_irep, lower_op.type());
+    dstringt lower_const_string(std::to_string(lower_bound));
+    irep_idt lower_const_irep(lower_const_string);
+    constant_exprt lower_val_const(lower_const_irep, lower_op.type());
 
-  exprt lower_constant_size = get_size_or_throw(arr.type().subtype(), contract.get_namespace(), log);
-  exprt lower_offset = typecast_exprt(mult_exprt(typecast_exprt(lower_val_const, unsigned_long_int_type()), lower_constant_size), signed_int_type());
+    exprt lower_constant_size = get_size_or_throw(arr.type().subtype(), contract.get_namespace(), log);
+    lower_offset_obj = typecast_exprt(mult_exprt(typecast_exprt(lower_val_const, unsigned_long_int_type()), lower_constant_size), signed_int_type());
 
-  // Declare a new symbol to stand in for the reference
-  symbolt lower_standin_symbol = contract.new_tmp_symbol(
-          lower_offset.type(),
-          f_sym.location,
-          func_id,
-          f_sym.mode);
+    // Declare a new symbol to stand in for the reference
+    symbolt lower_standin_symbol = contract.new_tmp_symbol(
+      lower_offset_obj.type(),
+      f_sym.location,
+      func_id,
+      f_sym.mode);
 
-  lower_offset_var = lower_standin_symbol.symbol_expr();
+    lower_offset_var = lower_standin_symbol.symbol_expr();
 
-  // Add array temp to variable initialization block
-  init_block.add(goto_programt::make_decl(lower_offset_var, f_sym.location));
-  init_block.add(goto_programt::make_assignment(
-          code_assignt(lower_offset_var, lower_offset), f_sym.location));
+    // Add array temp to variable initialization block
+    init_block.add(goto_programt::make_decl(lower_offset_var, f_sym.location));
+    init_block.add(goto_programt::make_assignment(
+      code_assignt(lower_offset_var, lower_offset_obj), f_sym.location));
+  }
+  else
+  {
+    exprt lower_constant_size = get_size_or_throw(arr.type().subtype(), contract.get_namespace(), log);
+    lower_offset_obj = typecast_exprt(mult_exprt(typecast_exprt(lower_op, unsigned_long_int_type()), lower_constant_size), signed_int_type());
 
+    // Declare a new symbol to stand in for the reference
+    symbolt lower_standin_symbol = contract.new_tmp_symbol(
+      lower_offset_obj.type(),
+      f_sym.location,
+      func_id,
+      f_sym.mode);
 
-  dstringt upper_const_string(std::to_string(upper_bound));
-  irep_idt upper_const_irep(upper_const_string);
-  constant_exprt upper_val_const(upper_const_irep, upper_op.type());
+    lower_offset_var = lower_standin_symbol.symbol_expr();
 
-  exprt upper_constant_size = get_size_or_throw(arr.type().subtype(), contract.get_namespace(), log);
-  exprt upper_offset = typecast_exprt(mult_exprt(typecast_exprt(upper_val_const, unsigned_long_int_type()), upper_constant_size), signed_int_type());
+    // Add array temp to variable initialization block
+    init_block.add(goto_programt::make_decl(lower_offset_var, f_sym.location));
+    init_block.add(goto_programt::make_assignment(
+      code_assignt(lower_offset_var, lower_offset_obj), f_sym.location));
+  }
 
-  // Declare a new symbol to stand in for the reference
-  symbolt upper_standin_symbol = contract.new_tmp_symbol(
-          upper_offset.type(),
-          f_sym.location,
-          func_id,
-          f_sym.mode);
+  if(upper_op.id() == ID_constant)
+  {
+    int upperbase = std::stoi(to_constant_expr(upper_op).get(ID_C_base).c_str(), nullptr, 10);
+    upper_bound = std::stoi(to_constant_expr(upper_op).get_value().c_str(), nullptr, upperbase);
 
-  upper_offset_var = upper_standin_symbol.symbol_expr();
+    dstringt upper_const_string(std::to_string(upper_bound));
+    irep_idt upper_const_irep(upper_const_string);
+    constant_exprt upper_val_const(upper_const_irep, upper_op.type());
 
-  // Add array temp to variable initialization block
-  init_block.add(goto_programt::make_decl(upper_offset_var, f_sym.location));
-  init_block.add(goto_programt::make_assignment(
-          code_assignt(upper_offset_var, upper_offset), f_sym.location));
+    exprt upper_constant_size = get_size_or_throw(arr.type().subtype(), contract.get_namespace(), log);
+    upper_offset_obj = typecast_exprt(mult_exprt(typecast_exprt(upper_val_const, unsigned_long_int_type()), upper_constant_size), signed_int_type());
+
+    // Declare a new symbol to stand in for the reference
+    symbolt upper_standin_symbol = contract.new_tmp_symbol(
+      upper_offset_obj.type(),
+      f_sym.location,
+      func_id,
+      f_sym.mode);
+
+    upper_offset_var = upper_standin_symbol.symbol_expr();
+
+    // Add array temp to variable initialization block
+    init_block.add(goto_programt::make_decl(upper_offset_var, f_sym.location));
+    init_block.add(goto_programt::make_assignment(
+      code_assignt(upper_offset_var, upper_offset_obj), f_sym.location));
+  }
+  else
+  {
+    exprt upper_constant_size = get_size_or_throw(arr.type().subtype(), contract.get_namespace(), log);
+    upper_offset_obj = typecast_exprt(mult_exprt(typecast_exprt(upper_op, unsigned_long_int_type()), upper_constant_size), signed_int_type());
+
+    // Declare a new symbol to stand in for the reference
+    symbolt upper_standin_symbol = contract.new_tmp_symbol(
+      upper_offset_obj.type(),
+      f_sym.location,
+      func_id,
+      f_sym.mode);
+
+    upper_offset_var = upper_standin_symbol.symbol_expr();
+
+    // Add array temp to variable initialization block
+    init_block.add(goto_programt::make_decl(upper_offset_var, f_sym.location));
+    init_block.add(goto_programt::make_assignment(
+      code_assignt(upper_offset_var, upper_offset_obj), f_sym.location));
+  }
 }
 
 std::vector<symbol_exprt> assigns_clause_array_targett::temporary_declarations() const
@@ -1536,16 +1580,17 @@ assigns_clauset::~assigns_clauset()
 
 assigns_clause_targett* assigns_clauset::add_target(exprt curr_op)
 {
-    if(curr_op.id() == ID_array_range) {
+    if(curr_op.id() == ID_array_range)
+    {
         assigns_clause_array_targett* array_tgt = new assigns_clause_array_targett(curr_op, parent, log, func_id);
         targets.push_back(array_tgt);
         return array_tgt;
     }
     else if(curr_op.type().id() == ID_struct_tag)
     {
-        assigns_clause_struct_targett* struct_tgt = new assigns_clause_struct_targett(curr_op, parent, log, func_id);
-        targets.push_back(struct_tgt);
-        return struct_tgt;
+      assigns_clause_struct_targett* struct_tgt = new assigns_clause_struct_targett(curr_op, parent, log, func_id);
+      targets.push_back(struct_tgt);
+      return struct_tgt;
     }
     else
     {

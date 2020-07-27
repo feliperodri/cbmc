@@ -313,6 +313,9 @@ protected:
     int lower_bound;
     int upper_bound;
 
+    exprt lower_offset_obj;
+    exprt upper_offset_obj;
+
     symbol_exprt arr_standin_var;
     symbol_exprt lower_offset_var;
     symbol_exprt upper_offset_var;
