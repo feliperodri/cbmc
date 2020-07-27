@@ -141,19 +141,6 @@ protected:
     std::set<dstringt>& freely_assignable_symbols,
     assigns_clauset &assigns_clause);
 
-  /// Creates a local variable declaration for each expression in the assigns
-  /// clause (of the function given by f_sym), and stores them in created_decls.
-  /// Then creates assignment statements to capture the memory addresses of each
-  /// expression in the assigns clause within the associated local variable,
-  /// populating a vector created_references of these local variables.
-  void
-  populate_assigns_references(
-    const symbolt &f_sym,
-    const irep_idt& func_id,
-    goto_programt& created_decls,
-    std::vector<exprt>& created_references);
-
-
   /// Creates a local variable declaration for each expression in operands,
   /// and stores them in created_decls. Then creates assignment statements to
   /// capture the memory addresses of each expression in the assigns clause

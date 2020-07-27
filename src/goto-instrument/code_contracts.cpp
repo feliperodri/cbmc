@@ -430,20 +430,6 @@ void code_contractst::populate_assigns_reference(
 
             exprt constant_size = get_size_or_throw(arr.type().subtype(), ns, log);
 
-            std::cout << "DEBUGOUT: Ultimately, constant size expression: " << std::endl;
-            std::cout << constant_size.pretty() << std::endl;
-
-
-            //ansi_c_typecheckt ctb(symbol_table, f_sym.module, message_handlert &_message_handler);
-            /*
-            ansi_c_parse_treet &_parse_tree,
-            symbol_tablet &_symbol_table,
-            const std::string &_module,
-            message_handlert &_message_handler):
-            ansi_c_typecheckt ctb(symbol_table, f_sym.module, log);
-            ctb.typecheck_expr_sizeof(size_ex);
-             */
-
             // size_ex.set(ID_type_arg, arr.type().subtype());
             typet the_type = arr.type().subtype();
             typet print_type(the_type.get(ID_C_c_type));
@@ -511,18 +497,6 @@ void code_contractst::populate_assigns_reference(
   }
 }
 
-void code_contractst::populate_assigns_references(
-  const symbolt &f_sym,
-  const irep_idt &func_id,
-  goto_programt &created_decls,
-  std::vector<exprt> &created_references)
-{
-  const code_typet &type = to_code_type(f_sym.type);
-  exprt assigns = static_cast<const exprt &>(type.find(ID_C_spec_assigns));
-
-  populate_assigns_reference(assigns.operands(), f_sym, func_id, created_decls, created_references);
-}
-
 void code_contractst::instrument_assn_statement(
   const std::string &func_name,
   goto_programt::instructionst::iterator &ins_it,
@@ -537,12 +511,6 @@ void code_contractst::instrument_assn_statement(
     " an assignment");
 
   const exprt &lhs = ins_it->get_assign().lhs();
-  std::cout << "DEBUGOUT: Checking freely assignable for..." << std::endl << lhs.pretty() << std::endl;
-  std::cout << "DEBUGOUT: IN..." << std::endl;
-  for(auto sy : freely_assignable_symbols)
-  {
-    std::cout << "DEBUGOUT: " << sy.c_str() << std::endl;
-  }
 
   if(lhs.id() == ID_symbol &&
      freely_assignable_symbols.find(to_symbol_expr(lhs).get_identifier())
@@ -804,11 +772,8 @@ bool code_contractst::add_pointer_checks(const std::string &func_name)
   // Insert aliasing assertions
   for(; ins_it != program.instructions.end(); std::advance(ins_it, 1))
   {
-    std::cout << "DEBUGOUT: INSTRUMENTING - " << std::endl << ins_it->type << std::endl;
-
     if(ins_it->is_decl())
     {
-      std::cout << "DEBUGOUT: ADDING FREELY - " << ins_it->get_decl().symbol().get_identifier() << std::endl;
       freely_assignable_symbols.insert(ins_it->get_decl().symbol().get_identifier());
 
       assigns_clause_targett *new_target = assigns.add_target(ins_it->get_decl().symbol());
@@ -943,14 +908,6 @@ void code_contractst::add_contract_check(
 
   goto_programt check;
 
-  // if(nondet)
-  /* DEBUGOUT
-  check.add(goto_programt::make_goto(
-    skip,
-    side_effect_expr_nondett(bool_typet(), skip->source_location),
-    skip->source_location));
-   */
-
   // prepare function call including all declarations
   const symbolt &function_symbol = ns.lookup(mangled_fun);
   code_function_callt call(function_symbol.symbol_expr());
@@ -988,7 +945,6 @@ void code_contractst::add_contract_check(
                        parameter_symbol.mode)
                        .symbol_expr();
     check.add(goto_programt::make_decl(p, skip->source_location));
-    // DEBUGOUT
     check.add(goto_programt::make_assignment(p, parameter_symbol.symbol_expr(), skip->source_location));
 
     call.arguments().push_back(p);
@@ -1021,7 +977,6 @@ void code_contractst::add_contract_check(
       goto_programt::make_assertion(ensures_cond, ensures.source_location()));
   }
 
-  // DEBUGOUT
   if(gf.type.return_type()!=empty_typet())
   {
     check.add(goto_programt::make_return(return_stmt, skip->source_location));
@@ -1546,9 +1501,9 @@ exprt assigns_clause_array_targett::compatible_expression(
     {
         const assigns_clause_array_targett &array_target
                 = static_cast<const assigns_clause_array_targett &>(called_target);
-        exprt same_obj = same_object(this->arr_standin_var, array_target.arr_standin_var);
-        exprt in_range_lower = binary_predicate_exprt(array_target.lower_offset_var, ID_ge, this->lower_offset_var);
-        exprt in_range_upper = binary_predicate_exprt(this->upper_offset_var, ID_ge, array_target.upper_offset_var);
+        exprt same_obj = same_object(this->arr_standin_var, array_target.obj_pointer);
+        exprt in_range_lower = binary_predicate_exprt(array_target.lower_offset_obj, ID_ge, this->lower_offset_var);
+        exprt in_range_upper = binary_predicate_exprt(this->upper_offset_var, ID_ge, array_target.upper_offset_obj);
         exprt in_range = and_exprt(in_range_lower, in_range_upper);
         return and_exprt(same_obj, in_range);
     }
