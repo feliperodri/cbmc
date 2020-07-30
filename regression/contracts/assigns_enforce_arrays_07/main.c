@@ -1,7 +1,9 @@
 #include <assert.h>
 
 void assign_out_over(int a[], int len) 
-__CPROVER_assigns(a[2,5])
+__CPROVER_assigns(a[2,5]);
+
+void assign_out_over(int a[], int len) 
 {
  a[6] = 5;
 }

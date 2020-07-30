@@ -1,11 +1,5 @@
 #include <assert.h>
-
-void f2(int *x2, int *y2)
-__CPROVER_assigns(*x2)
-__CPROVER_ensures(*x2 > 5);
-
-void f3(int *x3, int *y3)
-__CPROVER_ensures(*x3 > 100);
+#include "header.h"
 
 void f2(int *x2, int *y2)
 {
@@ -24,7 +18,7 @@ int main()
 
   for(int i = 0; i < 5; ++i)
   {
-    if(i < 3) { f2(&p, &q); }
+    if(p < 3) { f2(&p, &q); }
     else { f3(&p, &q); }
   }
   assert(p > 100);

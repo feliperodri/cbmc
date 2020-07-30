@@ -2,14 +2,18 @@
 
 void f2(int *x2, int *y2)
 __CPROVER_assigns(*x2)
-__CPROVER_ensures(*x2 > 5)
+__CPROVER_ensures(*x2 > 5);
+
+void f3(int *x3, int *y3)
+__CPROVER_assigns(*x3)
+__CPROVER_ensures(*x3 > 100);
+
+void f2(int *x2, int *y2)
 {
   *x2 = 10;
 }
 
 void f3(int *x3, int *y3)
-__CPROVER_assigns(*x3)
-__CPROVER_ensures(*x3 > 100)
 {
   *x3 = 101;
 }

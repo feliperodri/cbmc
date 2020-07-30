@@ -7,7 +7,9 @@
 int initialize(int *arr)
   __CPROVER_ensures(
     __CPROVER_forall {int i; (0 <= i && i < 10) ==> arr[i] == i}
-  )
+  );
+
+int initialize(int *arr)
 {
   for(int i = 0; i < 10; i++)
   {

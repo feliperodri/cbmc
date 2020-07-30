@@ -1,7 +1,9 @@
 #include <assert.h>
 
 int f1(int *a, int *b) 
-__CPROVER_assigns(*a)
+__CPROVER_assigns(*a);
+
+int f1(int *a, int *b) 
 {
   while(*a > 0) {
     int *b = (int *)malloc(sizeof(int));

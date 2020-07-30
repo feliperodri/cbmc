@@ -1,7 +1,9 @@
 #include <assert.h>
 
 void bar(char d[])
-__CPROVER_assigns(d[7])
+__CPROVER_assigns(d[7]);
+
+void bar(char d[])
 {
 }
 

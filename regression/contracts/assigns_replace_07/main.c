@@ -1,7 +1,9 @@
 #include <assert.h>
 
 void foo(char c[])
-__CPROVER_assigns(c[2, 4])
+__CPROVER_assigns(c[2, 4]);
+
+void foo(char c[])
 {
 }
 

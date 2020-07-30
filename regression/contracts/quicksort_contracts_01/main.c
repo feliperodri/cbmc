@@ -32,7 +32,21 @@ int partition(int arr_ghost[], int arr[], int len)
     __CPROVER_forall {int i; (0 <= i && i <= __CPROVER_return_value) ==> arr[i] <= arr[__CPROVER_return_value]} &&
     __CPROVER_forall {int i; (__CPROVER_return_value <= i && i < len) ==> arr[__CPROVER_return_value] <= arr[i]} &&
     1 == 1
+  );
+
+void quicksort(int arr_ghost[], int arr[], int len)
+  __CPROVER_requires(
+    __CPROVER_forall {int i; (0 <= i && i < len) ==> arr_ghost[i] == arr[i]} &&
+    1 == 1
   )
+  __CPROVER_ensures(
+    __CPROVER_forall {int i; (0 <= i && i < len) ==> __CPROVER_exists {int j; 0 <= j && j < len && arr_ghost[i] == arr[j]}} &&
+    __CPROVER_forall {int i; (0 <= i && i < len) ==> __CPROVER_exists {int j; 0 <= j && j < len && arr[i] == arr_ghost[j]}} &&
+    __CPROVER_forall {int i; (0 <= i && i < len) ==> __CPROVER_forall {int j; (i <= j && j < len) ==> arr[i] <= arr[j]}} &&
+    1 == 1
+  );
+
+int partition(int arr_ghost[], int arr[], int len)
 {
   int h = len - 1;
   int l = 0;
@@ -76,16 +90,6 @@ int partition(int arr_ghost[], int arr[], int len)
 }
 
 void quicksort(int arr_ghost[], int arr[], int len)
-  __CPROVER_requires(
-    __CPROVER_forall {int i; (0 <= i && i < len) ==> arr_ghost[i] == arr[i]} &&
-    1 == 1
-  )
-  __CPROVER_ensures(
-    __CPROVER_forall {int i; (0 <= i && i < len) ==> __CPROVER_exists {int j; 0 <= j && j < len && arr_ghost[i] == arr[j]}} &&
-    __CPROVER_forall {int i; (0 <= i && i < len) ==> __CPROVER_exists {int j; 0 <= j && j < len && arr[i] == arr_ghost[j]}} &&
-    __CPROVER_forall {int i; (0 <= i && i < len) ==> __CPROVER_forall {int j; (i <= j && j < len) ==> arr[i] <= arr[j]}} &&
-    1 == 1
-  )
 {
   if(len <= 1)
   {

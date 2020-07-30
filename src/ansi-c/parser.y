@@ -1075,38 +1075,85 @@ post_declarator_attributes_opt:
         | post_declarator_attributes
         ;
 
+
 declaring_list:
           declaration_specifier declarator
           post_declarator_attributes_opt
           {
             $2=merge($3, $2); // type attribute
-            
+
             // the symbol has to be visible during initialization
             init($$, ID_declaration);
             parser_stack($$).type().swap(parser_stack($1));
             PARSER.add_declarator(parser_stack($$), parser_stack($2));
+            create_function_scope($$);
           }
           initializer_opt
+          assigns_opt
+          requires_opt
+          ensures_opt
         {
-          // add the initializer
           $$=$4;
-          to_ansi_c_declaration(parser_stack($$)).add_initializer(parser_stack($5));
+
+          if(parser_stack($6).is_not_nil()) // Capture assigns clause
+            parser_stack($$).add(ID_C_spec_assigns).swap(parser_stack($6));
+
+          // Capture code contract
+          if(parser_stack($7).is_not_nil())
+            parser_stack($$).add(ID_C_spec_requires).swap(parser_stack($7));
+          if(parser_stack($8).is_not_nil())
+            parser_stack($$).add(ID_C_spec_ensures).swap(parser_stack($8));
+
+          // add the initializer
+          if(parser_stack($5).is_not_nil())
+          {
+            to_ansi_c_declaration(parser_stack($$)).add_initializer(parser_stack($5));
+          }
+
+          // Kill the scope that 'function_head' creates.
+          PARSER.pop_scope();
+
+          // We are no longer in any function.
+          PARSER.set_function(irep_idt());
         }
         | type_specifier declarator
           post_declarator_attributes_opt
           {
             $2=merge($3, $2);
-            
+
             // the symbol has to be visible during initialization
             init($$, ID_declaration);
             parser_stack($$).type().swap(parser_stack($1));
             PARSER.add_declarator(parser_stack($$), parser_stack($2));
+            create_function_scope($$);
           }
           initializer_opt
+          assigns_opt
+          requires_opt
+          ensures_opt
         {
-          // add the initializer
           $$=$4;
-          to_ansi_c_declaration(parser_stack($$)).add_initializer(parser_stack($5));
+
+          if(parser_stack($6).is_not_nil()) // Capture assigns clause
+            parser_stack($$).add(ID_C_spec_assigns).swap(parser_stack($6));
+
+          // Capture code contract
+          if(parser_stack($7).is_not_nil())
+            parser_stack($$).add(ID_C_spec_requires).swap(parser_stack($7));
+          if(parser_stack($8).is_not_nil())
+            parser_stack($$).add(ID_C_spec_ensures).swap(parser_stack($8));
+
+          // add the initializer
+          if(parser_stack($5).is_not_nil())
+          {
+            to_ansi_c_declaration(parser_stack($$)).add_initializer(parser_stack($5));
+          }
+
+          // Kill the scope that 'function_head' creates.
+          PARSER.pop_scope();
+
+          // We are no longer in any function.
+          PARSER.set_function(irep_idt());
         }
         | TOK_GCC_AUTO_TYPE declarator
           post_declarator_attributes_opt '=' initializer
@@ -2897,33 +2944,20 @@ asm_definition:
 
 function_definition:
           function_head
-          assigns_opt
-          requires_opt
-          ensures_opt
           function_body
         {
-
-          // Capture assigns clause
-          if(parser_stack($2).is_not_nil())
-            parser_stack($1).add(ID_C_spec_assigns).swap(parser_stack($2));
-
-          // Capture code contract
-          if(parser_stack($3).is_not_nil())
-            parser_stack($1).add(ID_C_spec_requires).swap(parser_stack($3));
-          if(parser_stack($4).is_not_nil())
-            parser_stack($1).add(ID_C_spec_ensures).swap(parser_stack($4));
           // The head is a declaration with one declarator,
           // and the body becomes the 'value'.
           $$=$1;
           ansi_c_declarationt &ansi_c_declaration=
             to_ansi_c_declaration(parser_stack($$));
-            
+
           assert(ansi_c_declaration.declarators().size()==1);
-          ansi_c_declaration.add_initializer(parser_stack($5));
-          
+          ansi_c_declaration.add_initializer(parser_stack($2));
+
           // Kill the scope that 'function_head' creates.
           PARSER.pop_scope();
-          
+
           // We are no longer in any function.
           PARSER.set_function(irep_idt());
         }

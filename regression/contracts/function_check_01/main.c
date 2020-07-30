@@ -10,7 +10,9 @@ int min(int a, int b)
   __CPROVER_ensures(__CPROVER_return_value <= a &&
                     __CPROVER_return_value <= b &&
                    (__CPROVER_return_value == a || __CPROVER_return_value == b)
-                   )
+                   );
+
+int min(int a, int b)
 {
   if(a <= b)
   {

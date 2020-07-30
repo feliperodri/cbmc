@@ -30,7 +30,9 @@ typedef struct bar
 } bar;
 
 void foo(bar *x)
-  __CPROVER_requires(__CPROVER_VALID_MEM(x, sizeof(bar)))
+  __CPROVER_requires(__CPROVER_VALID_MEM(x, sizeof(bar)));
+
+void foo(bar *x)
 {
   x->x += 1;
   return

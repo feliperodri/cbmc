@@ -1,12 +1,16 @@
 #include <assert.h>
 
 void assign_17(int a[], int len) 
-__CPROVER_assigns(a[1,7])
+__CPROVER_assigns(a[1,7]);
+
+void assign_25(int a[], int len) 
+__CPROVER_assigns(a[2,5]);
+
+void assign_17(int a[], int len) 
 {
 }
 
 void assign_25(int a[], int len) 
-__CPROVER_assigns(a[2,5])
 {
  assign_17(a, len);
 }

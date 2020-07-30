@@ -1,7 +1,9 @@
 #include <assert.h>
 
 void assigns_in_range(int a[], int last_idx) 
-__CPROVER_assigns(a[2,last_idx])
+__CPROVER_assigns(a[2,last_idx]);
+
+void assigns_in_range(int a[], int last_idx) 
 {
   a[last_idx] = 6;
 }

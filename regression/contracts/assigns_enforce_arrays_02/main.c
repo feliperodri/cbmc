@@ -3,14 +3,18 @@
 int idx = 4;
 
 int nextIdx() 
-__CPROVER_assigns(idx)
+__CPROVER_assigns(idx);
+
+void f1(int a[], int len) 
+__CPROVER_assigns(idx, a[2,5]);
+
+int nextIdx() 
 {
   idx++;
   return idx;
 }
 
 void f1(int a[], int len) 
-__CPROVER_assigns(idx, a[2,5])
 {
  a[nextIdx()] = 5;
 }
