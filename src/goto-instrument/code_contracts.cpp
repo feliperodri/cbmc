@@ -13,7 +13,6 @@ Date: February 2016
 
 #include "code_contracts.h"
 #include "loop_utils.h"
-#include "pointer_predicates.h"
 
 #include <algorithm>
 #include <cstring>
@@ -25,13 +24,14 @@ Date: February 2016
 
 #include <linking/static_lifetime_init.h>
 
+#include <ansi-c/expr2c.h>
 #include <util/c_types.h>
 #include <util/expr_util.h>
 #include <util/fresh_symbol.h>
 #include <util/message.h>
 #include <util/pointer_offset_size.h>
+#include <util/pointer_predicates.h>
 #include <util/replace_symbol.h>
-#include "expr2c.h"
 
 /// Predicate to be used with the exprt::visit() function. The function
 /// found_return_value() will return `true` iff this predicate is called on an
@@ -456,8 +456,10 @@ void code_contractst::instrument_call_statement(
 
   if(std::strcmp(called_name.c_str(), "malloc") == 0)
   {
-    // Make freshly allocated memory assignable, if we can determine its type.
     goto_programt::instructionst::iterator local_ins_it = ins_it;
+    // Malloc statments return a void pointer, which is then cast and assigned
+    // to a result variable. We iterate one line forward to grab the result of
+    // the malloc once it is cast.
     local_ins_it++;
     if(local_ins_it->is_assign())
     {
@@ -466,6 +468,7 @@ void code_contractst::instrument_call_statement(
       {
         typet cast_type = rhs.type();
 
+        // Make freshly allocated memory assignable, if we can determine its type.
         assigns_clause_targett *new_target = assigns_clause.add_pointer_target(rhs);
         goto_programt &pointer_capture = new_target->get_init_block();
 

@@ -12,6 +12,7 @@ Author: Daniel Kroening, kroening@kroening.com
 #include "c_typecheck_base.h"
 
 #include <cassert>
+#include <cstring>
 #include <iostream>
 #include <sstream>
 
