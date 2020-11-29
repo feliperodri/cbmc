@@ -33,6 +33,11 @@ void __CPROVER_atomic_begin();
 void __CPROVER_atomic_end();
 void __CPROVER_fence(const char *kind, ...);
 
+// contract-related functions
+_Bool __CPROVER_borrow(const void *mem, __CPROVER_size_t size, unsigned flags);
+_Bool __CPROVER_take(const void *mem, __CPROVER_size_t size, unsigned flags);
+_Bool __CPROVER_give(const void *mem);
+
 // pointers
 __CPROVER_size_t __CPROVER_POINTER_OBJECT(const void *);
 __CPROVER_ssize_t __CPROVER_POINTER_OFFSET(const void *);

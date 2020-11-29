@@ -51,6 +51,13 @@ void __CPROVER_printf(const char *format, ...);
 void __CPROVER_input(const char *id, ...);
 void __CPROVER_output(const char *id, ...);
 
+
+// contract-related functions
+_Bool __CPROVER_borrow(const void *mem, __CPROVER_size_t size, unsigned flags);
+_Bool __CPROVER_take(const void *mem, __CPROVER_size_t size, unsigned flags);
+_Bool __CPROVER_give(const void *mem);
+
+
 // concurrency-related
 void __CPROVER_atomic_begin();
 void __CPROVER_atomic_end();

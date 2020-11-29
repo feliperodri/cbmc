@@ -18,6 +18,7 @@ Date: February 2016
 #include <analyses/local_may_alias.h>
 
 #include <goto-programs/remove_skip.h>
+#include <goto-programs/goto_convert_class.h>
 
 #include <linking/static_lifetime_init.h>
 
@@ -33,6 +34,10 @@ Date: February 2016
 #include <util/replace_symbol.h>
 
 #include "loop_utils.h"
+
+// TEMPORARY
+#include <langapi/language_util.h>
+#include <util/std_code.h>
 
 /// Predicate to be used with the exprt::visit() function. The function
 /// found_return_value() will return `true` iff this predicate is called on an
@@ -61,6 +66,17 @@ public:
 
 protected:
   bool found;
+};
+
+
+class function_binding_visitort : const_expr_visitort {
+public:
+	function_binding_visitort() : const_expr_visitort() {}
+
+	void operator()(const exprt &exp) override
+	{
+
+	}
 };
 
 exprt get_size(const typet &type, const namespacet &ns, messaget &log)
@@ -692,6 +708,11 @@ bool code_contractst::enforce_contract(const std::string &fun_to_enforce)
   wrapper.parameter_identifiers = mangled_fun->second.parameter_identifiers;
   wrapper.body.add(goto_programt::make_end_function(sl));
   add_contract_check(original, mangled, wrapper.body);
+
+  // convert wrapper function.  This splits out any function calls made in
+  // contracts.
+  //goto_convert(original, symbol_table, goto_functions, log.get_message_handler());
+
   return false;
 }
 
@@ -778,20 +799,23 @@ void code_contractst::add_contract_check(
     replace.insert(parameter_symbol.symbol_expr(), p);
   }
 
+  // we create the assumption instruction, then convert it using
+  // goto_convert, because of function call expressions that need to become statements.
+  goto_convertt converter(symbol_table, log.get_message_handler());
+
   // assume(requires)
   if(requires.is_not_nil())
   {
     // rewrite any use of parameters
     exprt requires_cond = requires;
     replace(requires_cond);
-
-    check.add(goto_programt::make_assumption(
-      requires_cond, requires.source_location()));
+    converter.goto_convert(code_assumet(requires_cond), check, function_symbol.mode);
   }
 
   // ret=mangled_fun(parameter1, ...)
   check.add(goto_programt::make_function_call(call, skip->source_location));
 
+  // MWW: should this be under the ensures.is_not_nil()?
   // rewrite any use of __CPROVER_return_value
   exprt ensures_cond = ensures;
   replace(ensures_cond);
@@ -799,8 +823,7 @@ void code_contractst::add_contract_check(
   // assert(ensures)
   if(ensures.is_not_nil())
   {
-    check.add(
-      goto_programt::make_assertion(ensures_cond, ensures.source_location()));
+	 converter.goto_convert(code_assertt(ensures_cond), check, function_symbol.mode);
   }
 
   if(code_type.return_type() != empty_typet())

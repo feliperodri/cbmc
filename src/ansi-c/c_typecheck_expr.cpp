@@ -2126,7 +2126,38 @@ exprt c_typecheck_baset::do_special_functions(
 
   const irep_idt &identifier=to_symbol_expr(f_op).get_identifier();
 
-  if(identifier==CPROVER_PREFIX "same_object")
+  if (identifier==CPROVER_PREFIX "borrow") {
+	  if (expr.arguments().size()!= 3) {
+		  error().source_location = f_op.source_location();
+		  error() << "borrow expects three operands"
+				  << expr.arguments().size() << "provided." << eom;
+		  throw 0;
+	  }
+	  typecheck_function_call_arguments(expr);
+	  return nil_exprt();
+  }
+  else if (identifier==CPROVER_PREFIX "take") {
+	  if (expr.arguments().size()!= 3) {
+		  error().source_location = f_op.source_location();
+		  error() << "borrow expects three operands"
+				  << expr.arguments().size() << "provided." << eom;
+		  throw 0;
+	  }
+	  typecheck_function_call_arguments(expr);
+	  return nil_exprt();
+  }
+  else if (identifier==CPROVER_PREFIX "give") {
+	  if (expr.arguments().size()!= 1) {
+		  error().source_location = f_op.source_location();
+		  error() << "give expects one operand"
+				  << expr.arguments().size() << "provided." << eom;
+		  throw 0;
+	  }
+	  typecheck_function_call_arguments(expr);
+	  return nil_exprt();
+  }
+
+  else if(identifier==CPROVER_PREFIX "same_object")
   {
     if(expr.arguments().size()!=2)
     {
