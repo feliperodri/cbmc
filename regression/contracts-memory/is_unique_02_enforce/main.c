@@ -19,6 +19,6 @@ int main()
 {
   int n = 4;
   n = foo(&n, 3);
-
+  assert(!(n < 4));
   return 0;
 }

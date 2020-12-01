@@ -103,6 +103,10 @@ protected:
   /// \brief Enforce contract of a single function
   bool enforce_contract(const std::string &);
 
+  /// Create code corresponding to assertion
+  void create_assertion(const exprt &assertion_cond, const irep_idt &mode, goto_programt &target);
+  void create_assumption(const exprt &assumption_cond, const irep_idt &mode, goto_programt &target);
+
   /// Insert assertion statements into the goto program to ensure that
   /// assigned memory is within the assignable memory frame.
   bool add_pointer_checks(const std::string &);

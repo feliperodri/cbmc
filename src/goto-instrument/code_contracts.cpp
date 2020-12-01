@@ -88,6 +88,7 @@ exprt get_size(const typet &type, const namespacet &ns, messaget &log)
   return result;
 }
 
+
 static void check_apply_invariants(
   goto_functionst::goto_functiont &goto_function,
   const local_may_aliast &local_may_alias,
@@ -267,11 +268,14 @@ bool code_contractst::apply_function_contract(
   // Insert assertion of the precondition immediately before the call site.
   if(requires.is_not_nil())
   {
-    goto_programt::instructiont a =
-      goto_programt::make_assertion(requires, target->source_location);
-
-    goto_program.insert_before_swap(target, a);
-    ++target;
+    goto_programt assertion; 
+    create_assertion(requires, symbol_table.lookup_ref(function).mode, assertion);
+    int lines_to_iterate = assertion.instructions.size();
+    goto_program.insert_before_swap(target, assertion);
+    //goto_programt::instructiont a =
+    //  goto_programt::make_assertion(requires, target->source_location);
+    // goto_program.insert_before_swap(target, a);
+    std::advance(target, lines_to_iterate);
   }
 
   // Create a series of non-deterministic assignments to havoc the variables
@@ -288,18 +292,21 @@ bool code_contractst::apply_function_contract(
     std::advance(target, lines_to_iterate);
   }
 
-  // To remove the function call, replace it with an assumption statement
-  // assuming the postcondition, if there is one. Otherwise, replace the
-  // function call with a SKIP statement.
+  // To remove the function call, insert statements related to the assumption.
+  // Then, replace the function call with a SKIP statement.
   if(ensures.is_not_nil())
   {
-    *target = goto_programt::make_assumption(ensures, target->source_location);
-  }
-  else
-  {
+    goto_programt assumption; 
+    create_assumption(ensures, symbol_table.lookup_ref(function).mode, assumption);
+    int lines_to_iterate = assumption.instructions.size();
+    goto_program.insert_before_swap(target, assumption);
+    std::advance(target, lines_to_iterate);
+    *target = goto_programt::make_skip();
+    //*target = goto_programt::make_assumption(ensures, target->source_location);
+  } else {
     *target = goto_programt::make_skip();
   }
-
+  
   // Add this function to the set of replaced functions.
   summarized.insert(function);
   return false;
@@ -716,6 +723,20 @@ bool code_contractst::enforce_contract(const std::string &fun_to_enforce)
   return false;
 }
 
+/// we create the assertion instruction, then convert it using
+/// goto_convert, because of function call expressions that need to become statements.
+void code_contractst::create_assertion(const exprt &cond, const irep_idt &mode, goto_programt &code) {
+  goto_convertt converter(symbol_table, log.get_message_handler());
+  converter.goto_convert(code_assertt(cond), code, mode);
+}
+
+ // we create the assumption instruction, then convert it using
+ // goto_convert, because of function call expressions that need to become statements.
+ void code_contractst::create_assumption(const exprt &cond, const irep_idt &mode, goto_programt &code) {
+  goto_convertt converter(symbol_table, log.get_message_handler());
+  converter.goto_convert(code_assumet(cond), code, mode);
+}
+
 void code_contractst::add_contract_check(
   const irep_idt &wrapper_fun,
   const irep_idt &mangled_fun,
@@ -809,7 +830,9 @@ void code_contractst::add_contract_check(
     // rewrite any use of parameters
     exprt requires_cond = requires;
     replace(requires_cond);
-    converter.goto_convert(code_assumet(requires_cond), check, function_symbol.mode);
+    goto_programt assumption;
+    create_assumption(requires_cond, function_symbol.mode, assumption); 
+    check.destructive_append(assumption);
   }
 
   // ret=mangled_fun(parameter1, ...)
@@ -823,7 +846,10 @@ void code_contractst::add_contract_check(
   // assert(ensures)
   if(ensures.is_not_nil())
   {
-	 converter.goto_convert(code_assertt(ensures_cond), check, function_symbol.mode);
+    goto_programt assertion;
+    create_assertion(ensures_cond, function_symbol.mode, assertion);
+    check.destructive_append(assertion);
+	  // converter.goto_convert(code_assertt(ensures_cond), check, function_symbol.mode);
   }
 
   if(code_type.return_type() != empty_typet())
