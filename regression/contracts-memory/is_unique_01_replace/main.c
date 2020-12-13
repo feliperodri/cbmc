@@ -1,5 +1,10 @@
 #include <assert.h>
 #include <stdbool.h>
+// #include <cprover.h>
+double fabs(double a);
+_Bool __CPROVER_is_fresh(const void *mem, __CPROVER_size_t size, unsigned flags);
+_Bool is_fresh(const void *mem, __CPROVER_size_t size, unsigned flags);
+void bzero(void *s, __CPROVER_size_t n);
 
 int z;
 
@@ -32,6 +37,12 @@ int main()
   int o = foo(&n);
   int p = n;
   int q = o;
+  float r = -1.0;
+  bzero(&q, sizeof(int));
+  assert(q == 0);
+  assert(fabs(r) == r);
   assert(!ptr_ok(&o) && return_ok(o, &n));
+  assert(is_fresh(&n, sizeof(int), 0));
+  assert(__CPROVER_is_fresh(&n, sizeof(int), 0));
   return 0;
 }

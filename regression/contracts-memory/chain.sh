@@ -8,12 +8,16 @@ cbmc=$3
 is_windows=$4
 
 name=${*:$#}
+echo "Files: "
+echo $name
 name=${name%.c}
 
 args=${*:5:$#-5}
 
 echo "Current Directory:"
 pwd 
+echo "Files: "
+echo $name
 
 if [[ "${is_windows}" == "true" ]]; then
   $goto_cc "${name}.c"

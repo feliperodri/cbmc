@@ -14,6 +14,8 @@ Date: February 2016
 #include "code_contracts.h"
 
 #include <algorithm>
+#include <cstring>
+#include <set>
 
 #include <analyses/local_may_alias.h>
 
@@ -68,6 +70,66 @@ protected:
   bool found;
 };
 
+
+/// Predicate to be used with the exprt::visit() function. The function
+/// found_return_value() will return `true` iff this predicate is called on an
+/// expr that contains `__CPROVER_return_value`.
+class functions_in_scope_visitort
+{
+
+public:
+  functions_in_scope_visitort(const goto_functionst &goto_functions,
+                              messaget &log) : goto_functions(goto_functions), log(log) { }
+
+  // \brief return the set of functions invoked by the call graph of this program.
+  std::set<const irep_idt> &function_calls()
+  {
+    return function_set;
+  }
+
+  void operator()(const goto_programt &prog)
+  {
+    forall_goto_program_instructions(ins, prog) {
+      if (ins->is_function_call()) {
+        const code_function_callt &call = ins->get_function_call();
+
+        if (call.function().id() != ID_symbol) {
+          log.error().source_location = call.find_source_location();
+          log.error() << "Function pointer used in function invoked by function contract: "
+                    << messaget::eom;
+          throw 0;
+        } else {
+          const irep_idt &fun_name =
+            to_symbol_expr(call.function()).get_identifier();
+          if (function_set.find(fun_name) == function_set.end())  {
+            function_set.insert(fun_name);
+            auto called_fun = goto_functions.function_map.find(fun_name);
+            if(called_fun == goto_functions.function_map.end())
+            {
+              log.error() << "Could not find function '" << fun_name
+                          << "' in goto-program."
+                          << messaget::eom;
+              throw 0;
+            }
+            if (called_fun->second.body_available()) {
+              const goto_programt &program = called_fun->second.body;
+              (*this)(program);
+            } else {
+              log.warning() << "No body for function: " << fun_name
+                            << "invoked from function contract."
+                            << messaget::eom;
+            }
+          }
+        }
+      }
+    }
+  }
+
+protected:
+  const goto_functionst &goto_functions;
+  messaget &log;
+  std::set<const irep_idt> function_set;
+};
 
 class function_binding_visitort : const_expr_visitort {
 public:
@@ -268,7 +330,7 @@ bool code_contractst::apply_function_contract(
   // Insert assertion of the precondition immediately before the call site.
   if(requires.is_not_nil())
   {
-    goto_programt assertion; 
+    goto_programt assertion;
     create_assertion(requires, symbol_table.lookup_ref(function).mode, assertion);
     int lines_to_iterate = assertion.instructions.size();
     goto_program.insert_before_swap(target, assertion);
@@ -296,7 +358,7 @@ bool code_contractst::apply_function_contract(
   // Then, replace the function call with a SKIP statement.
   if(ensures.is_not_nil())
   {
-    goto_programt assumption; 
+    goto_programt assumption;
     create_assumption(ensures, symbol_table.lookup_ref(function).mode, assumption);
     int lines_to_iterate = assumption.instructions.size();
     goto_program.insert_before_swap(target, assumption);
@@ -306,7 +368,7 @@ bool code_contractst::apply_function_contract(
   } else {
     *target = goto_programt::make_skip();
   }
-  
+
   // Add this function to the set of replaced functions.
   summarized.insert(function);
   return false;
@@ -723,11 +785,22 @@ bool code_contractst::enforce_contract(const std::string &fun_to_enforce)
   return false;
 }
 
+
+// functions_in_scope_visitort
 /// we create the assertion instruction, then convert it using
 /// goto_convert, because of function call expressions that need to become statements.
 void code_contractst::create_assertion(const exprt &cond, const irep_idt &mode, goto_programt &code) {
   goto_convertt converter(symbol_table, log.get_message_handler());
   converter.goto_convert(code_assertt(cond), code, mode);
+
+  // Let's see what functions are called!
+  functions_in_scope_visitort visitor(goto_functions, log);
+  visitor(code);
+  log.debug() << "Emitting functions for assertion: " << from_expr(ns, ID_C, cond) << "\n" <<  messaget::eom;
+  for (auto it = visitor.function_calls().begin(); it != visitor.function_calls().end(); it++) {
+    log.debug() << "  Called function: " << *it << "\n"  << messaget::eom;
+  }
+
 }
 
  // we create the assumption instruction, then convert it using
@@ -735,6 +808,14 @@ void code_contractst::create_assertion(const exprt &cond, const irep_idt &mode, 
  void code_contractst::create_assumption(const exprt &cond, const irep_idt &mode, goto_programt &code) {
   goto_convertt converter(symbol_table, log.get_message_handler());
   converter.goto_convert(code_assumet(cond), code, mode);
+
+  // Let's see what functions are called!
+  functions_in_scope_visitort visitor(goto_functions, log);
+  visitor(code);
+  log.debug() << "Emitting functions for assertion: " << from_expr(ns, ID_C, cond)  << messaget::eom;
+  for (auto it = visitor.function_calls().begin(); it != visitor.function_calls().end(); it++) {
+    log.debug() << "  Called function: " << *it << messaget::eom;
+  }
 }
 
 void code_contractst::add_contract_check(
@@ -831,7 +912,7 @@ void code_contractst::add_contract_check(
     exprt requires_cond = requires;
     replace(requires_cond);
     goto_programt assumption;
-    create_assumption(requires_cond, function_symbol.mode, assumption); 
+    create_assumption(requires_cond, function_symbol.mode, assumption);
     check.destructive_append(assumption);
   }
 
@@ -849,6 +930,8 @@ void code_contractst::add_contract_check(
     goto_programt assertion;
     create_assertion(ensures_cond, function_symbol.mode, assertion);
     check.destructive_append(assertion);
+
+
 	  // converter.goto_convert(code_assertt(ensures_cond), check, function_symbol.mode);
   }
 
