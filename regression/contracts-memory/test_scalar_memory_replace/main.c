@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-bool dummy_for_definitions(int *n) {
+bool var(int *n) {
   assert(__CPROVER_is_fresh(&n, sizeof(int)));
   int *x = malloc(sizeof(int));
 }

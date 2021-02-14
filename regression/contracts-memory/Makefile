@@ -12,7 +12,7 @@ else
 endif
 
 test:
-	@../test.pl -e -p -c '../chain.sh $(exe) ../../../build/bin/goto-instrument ../../../src/cbmc/cbmc $(is_windows)'
+	@../test.pl -e -p -c '../chain.sh $(exe) ../../../build/bin/goto-instrument ../../../build/bin/cbmc $(is_windows)'
 
 tests.log:
 	@../test.pl -e -p -c '../chain.sh $(exe) ../../../build/bin/goto-instrument ../../../build/bin/cbmc $(is_windows)'

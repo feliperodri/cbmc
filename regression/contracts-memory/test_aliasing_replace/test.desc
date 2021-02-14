@@ -1,9 +1,9 @@
 CORE
 main.c
 --replace-all-calls-with-contracts
-^EXIT=0$
+^EXIT=10$
 ^SIGNAL=0$
-^VERIFICATION SUCCESSFUL$
+^VERIFICATION FAILED$
 --
 --
 This test checks that verification succeeds if only expressions inside the assigns clause are assigned within the function.

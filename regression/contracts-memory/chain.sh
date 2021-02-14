@@ -42,5 +42,5 @@ elif echo $args | grep -q -- "--dump-c" ; then
 
   rm "${name}-mod.c"
 fi
-$goto_instrument --show-goto-functions "${name}-mod.gb"
+# $goto_instrument --show-goto-functions "${name}-mod.gb"
 $cbmc --trace "${name}-mod.gb"
