@@ -116,6 +116,7 @@ bool model_argc_argv(
 
   goto_programt init_instructions;
   exprt value=nil_exprt();
+
   // locate the body of the newly built start function as well as any
   // additional declarations we might need; the body will then be
   // converted and inserted into the start function

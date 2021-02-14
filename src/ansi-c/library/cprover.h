@@ -53,14 +53,9 @@ void __CPROVER_output(const char *id, ...);
 
 
 // contract-related functions
-
-const unsigned __CPROVER_READ = 0x01;
-const unsigned __CPROVER_WRITE = 0x02;
-const unsigned __CPROVER_FREE = 0x04;
-
-_Bool __CPROVER_is_fresh(const void *mem, __CPROVER_size_t size, uint8_t flags);
-_Bool __CPROVER_take(const void *mem, __CPROVER_size_t size, uint8_t flags);
-_Bool __CPROVER_give(const void *mem);
+__CPROVER_bool __CPROVER_is_fresh(const void *mem, __CPROVER_size_t size);
+__CPROVER_bool __CPROVER_is_writeable(const void *mem);
+__CPROVER_bool __CPROVER_is_freeable(const void *mem);
 
 
 // concurrency-related

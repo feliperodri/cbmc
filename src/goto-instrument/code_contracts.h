@@ -89,7 +89,11 @@ public:
     const irep_idt &function_id,
     const irep_idt &mode);
 
-  namespacet ns;
+  const namespacet &get_namespace() const;
+
+  // for "helper" classes to update symbol table.
+  symbol_tablet &get_symbol_table();
+  goto_functionst &get_goto_functions();
 
 protected:
   symbol_tablet &symbol_table;
@@ -103,9 +107,8 @@ protected:
   /// \brief Enforce contract of a single function
   bool enforce_contract(const std::string &);
 
-  /// Create code corresponding to assertion
-  void create_assertion(const exprt &assertion_cond, const irep_idt &mode, goto_programt &target);
-  void create_assumption(const exprt &assumption_cond, const irep_idt &mode, goto_programt &target);
+  /// Create code corresponding to assertion/assumption
+  void convert_to_goto(const codet &code, const irep_idt &mode, goto_programt &target);
 
   /// Insert assertion statements into the goto program to ensure that
   /// assigned memory is within the assignable memory frame.
@@ -352,5 +355,98 @@ protected:
   const irep_idt function_id;
   messaget log;
 };
+
+/********************************************
+ * is_fresh allocation and checking
+ *
+ *   - for contract enforcement, creates an infinite map that records the allocated elements in preconditions
+ *     and a function for each type used in a contract that returns an object or array of that type.  For
+ *     postcondition, it ensures that an object is 'fresh' (e.g., not previously created)
+ *      Declarations:
+ *        static uint8_t __<fn_name>_memory_map[__CPROVER_constant_infinity_uint];
+ *        For each referenced type:
+ *          static bool __<fn_name>_<type>_requires_is_fresh(<type> *elem, size_t size);
+ *          static bool __<fn_name>_<type>_ensures_is_fresh(<type> *elem, size_t size);
+ *
+ *   - for contract use, we need to create dual declarations.  For the precondition, we need to check that
+ *     all objects mapped to "fresh" objects are distinct.  For the postcondition, if an object is "fresh",
+ *     we need to create a new object to represent it.
+ *
+ *      Declarations (per call):
+ *        static uint8_t <fn_name>_memory_map[__CPROVER_constant_infinity_uint];
+ *        For each referenced type:
+ *          static bool __call_<fn_name>_<type>_requires_is_fresh(<type> *elem, size_t size);
+ *          static bool __call_<fn_name>_<type>_ensures_is_fresh(<type> *elem, size_t size);
+ *
+ *     Note that for a given context, we may have multiple calls to the same function, so we have to be sure to
+ *     create unique identifiers for the declarations.
+ *
+ *   Need symbol table to create new symbols and functions.
+ *   Need set of types to determine which functions to construct.
+ *
+ *   Procedure:
+ *     - Visit both the requires/asserts expressions to determine the set of called functions and their types.
+ *     - Generate declarations for is_fresh and memory_maps and record the names for...
+ *     - Doing replacements for code.
+ *
+ *******************************************/
+class is_fresh_baset {
+public:
+  is_fresh_baset(code_contractst &_parent,
+                 messaget _log,
+                 const irep_idt _fun_id) : parent(_parent), log(_log), fun_id(_fun_id)  {};
+
+  void update_requires(goto_programt &requires);
+  void update_ensures(goto_programt &ensures);
+
+  virtual void create_declarations() = 0;
+
+protected:
+  void add_declarations(const std::string &decl_string);
+  void update_fn_call(goto_programt::targett &target, const std::string &name, bool add_address_of);
+
+  virtual void create_requires_fn_call(goto_programt::targett &target) = 0;
+  virtual void create_ensures_fn_call(goto_programt::targett &target) = 0;
+
+  code_contractst &parent;
+  messaget log;
+  irep_idt fun_id;
+
+  // written by the child classes.
+  std::string memmap_name;
+  std::string requires_fn_name;
+  std::string ensures_fn_name;
+
+};
+
+
+class is_fresh_enforcet : public is_fresh_baset {
+public:
+  is_fresh_enforcet(code_contractst &_parent,
+                    messaget _log,
+                    const irep_idt _fun_id);
+
+    virtual void create_declarations();
+
+protected:
+    virtual void create_requires_fn_call(goto_programt::targett &target);
+    virtual void create_ensures_fn_call(goto_programt::targett &target);
+
+};
+
+class is_fresh_replacet : public is_fresh_baset {
+public:
+  is_fresh_replacet(code_contractst &_parent,
+                    messaget _log,
+                    const irep_idt _fun_id);
+
+  virtual void create_declarations();
+
+protected:
+    virtual void create_requires_fn_call(goto_programt::targett &target);
+    virtual void create_ensures_fn_call(goto_programt::targett &target);
+
+};
+
 
 #endif // CPROVER_GOTO_INSTRUMENT_CODE_CONTRACTS_H

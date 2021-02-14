@@ -2127,9 +2127,9 @@ exprt c_typecheck_baset::do_special_functions(
   const irep_idt &identifier=to_symbol_expr(f_op).get_identifier();
 
   if (identifier==CPROVER_PREFIX "is_fresh") {
-	  if (expr.arguments().size()!= 3) {
+	  if (expr.arguments().size()!= 2) {
 		  error().source_location = f_op.source_location();
-		  error() << CPROVER_PREFIX "is_fresh expects three operands"
+		  error() << CPROVER_PREFIX "is_fresh expects two operands; "
 				  << expr.arguments().size() << "provided." << eom;
 		  throw 0;
 	  }

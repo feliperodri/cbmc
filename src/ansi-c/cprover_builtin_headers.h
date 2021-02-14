@@ -34,9 +34,9 @@ void __CPROVER_atomic_end();
 void __CPROVER_fence(const char *kind, ...);
 
 // contract-related functions
-_Bool __CPROVER_is_fresh(const void *mem, __CPROVER_size_t size, uint8_t flags);
-_Bool __CPROVER_take(const void *mem, __CPROVER_size_t size, uint8_t flags);
-_Bool __CPROVER_give(const void *mem);
+__CPROVER_bool __CPROVER_is_fresh(const void *mem, __CPROVER_size_t size);
+__CPROVER_bool __CPROVER_is_writeable(const void *mem);
+__CPROVER_bool __CPROVER_is_freeable(const void *mem);
 
 // pointers
 __CPROVER_size_t __CPROVER_POINTER_OBJECT(const void *);
