@@ -158,7 +158,6 @@ void c_typecheck_baset::typecheck_new_symbol(symbolt &symbol)
     {
       // we don't need the identifiers
       code_typet &code_type = to_code_type(symbol.type);
-      unsigned anon_counter = 0;
 
       // Add the parameter declarations into the symbol table.
       for(auto &parameter : code_type.parameters())
@@ -173,15 +172,8 @@ void c_typecheck_baset::typecheck_new_symbol(symbolt &symbol)
         {
           parameter.set_identifier(irep_idt());
         }
-        else
+        else if(!parameter.get_base_name().empty()) // may be anonymous
         {
-          // may be anonymous
-          if(parameter.get_base_name().empty())
-          {
-            irep_idt base_name = "#anon" + std::to_string(anon_counter++);
-            parameter.set_base_name(base_name);
-          }
-
           // produce identifier
           irep_idt identifier =
             symbol_name + "::" + id2string(parameter.get_base_name());
@@ -199,6 +191,8 @@ void c_typecheck_baset::typecheck_new_symbol(symbolt &symbol)
           symbol.module = module;
 
           move_symbol(parameter_symbol, new_parameter_symbol);
+        } else {
+          parameter.set_identifier(irep_idt());
         }
       }
     }

@@ -1113,7 +1113,7 @@ declaring_list:
           PARSER.pop_scope();
 
           // We are no longer in any function.
-          PARSER.set_function(irep_idt());
+          PARSER.set_function(PARSER.current_scope().prefix.substr(0, PARSER.current_scope().prefix.find_first_of(':')));
         }
         | type_specifier declarator
           post_declarator_attributes_opt
@@ -1152,7 +1152,7 @@ declaring_list:
           PARSER.pop_scope();
 
           // We are no longer in any function.
-          PARSER.set_function(irep_idt());
+          PARSER.set_function(PARSER.current_scope().prefix.substr(0, PARSER.current_scope().prefix.find_first_of(':')));
         }
         | TOK_GCC_AUTO_TYPE declarator
           post_declarator_attributes_opt '=' initializer
