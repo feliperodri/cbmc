@@ -1471,7 +1471,6 @@ void dump_ct::cleanup_expr(exprt &expr)
 
     if(
       ns.follow(bu.type()).id() == ID_union &&
-      bu.source_location().get_function().empty() &&
       bu.op() == zero_initializer(bu.op().type(), source_locationt{}, ns)
                    .value_or(nil_exprt{}))
     {

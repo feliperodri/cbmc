@@ -168,6 +168,7 @@ void c_typecheck_baset::typecheck_new_symbol(symbolt &symbol)
         if(
           symbol_name.find("__CPROVER_") != std::string::npos ||
           symbol_name.find("__builtin_") != std::string::npos ||
+          symbol_name.find("__VERIFIER_") != std::string::npos ||
           symbol_name.find("__atomic_") != std::string::npos)
         {
           parameter.set_identifier(irep_idt());

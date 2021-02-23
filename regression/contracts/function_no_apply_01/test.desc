@@ -3,7 +3,7 @@ main.c
 
 ^EXIT=10$
 ^SIGNAL=0$
-^\[assertion.1\] file main.c line 19 assertion x == 0: FAILURE$
+^\[main.assertion.1\] line 19 assertion x == 0: FAILURE$
 ^VERIFICATION FAILED$
 --
 ^warning: ignoring
