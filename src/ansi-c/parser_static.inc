@@ -332,7 +332,8 @@ static void create_function_scope(const YYSTYPE d)
   ansi_c_declarationt &declaration=to_ansi_c_declaration(parser_stack(d));
   ansi_c_declaratort &declarator=declaration.declarator();
 
-  irep_idt function_name = std::string(declarator.get_name().c_str()).substr(0, std::string(declarator.get_name().c_str()).find_first_of(':'));
+  std::string declarator_name(declarator.get_name().c_str());
+  irep_idt function_name = declarator_name.substr(0, declarator_name.find_first_of(':'));
 
   // record which function we are in
   PARSER.set_function(function_name);

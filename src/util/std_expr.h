@@ -866,7 +866,12 @@ inline const int_range_exprt &to_int_range_exprt(const exprt &expr)
   return static_cast<const int_range_exprt &>(expr);
 }
 
-/// \copydoc int_range_exprt(const exprt &)
+/// \brief Cast an exprt to a \ref int_range_exprt
+///
+/// \a expr must be known to be \ref int_range_exprt.
+///
+/// \param expr: Source expression
+/// \return Object of type \ref int_range_exprt
 inline int_range_exprt &to_int_range_exprt(exprt &expr)
 {
   return static_cast<int_range_exprt &>(expr);

@@ -156,7 +156,6 @@ void c_typecheck_baset::typecheck_new_symbol(symbolt &symbol)
     }
     else
     {
-      // we don't need the identifiers
       code_typet &code_type = to_code_type(symbol.type);
 
       // Add the parameter declarations into the symbol table.
@@ -164,16 +163,17 @@ void c_typecheck_baset::typecheck_new_symbol(symbolt &symbol)
       {
         std::string symbol_name = id2string(symbol.name);
 
-        // skip CPROVER primitive, builtin and atomic functions
+        // CPROVER primitives, anonymous, builtin and atomics do not need identifiers
         if(
-          symbol_name.find("__CPROVER_") != std::string::npos ||
+          symbol_name.find("__atomic_") != std::string::npos ||
           symbol_name.find("__builtin_") != std::string::npos ||
+          symbol_name.find("__CPROVER_") != std::string::npos ||
           symbol_name.find("__VERIFIER_") != std::string::npos ||
-          symbol_name.find("__atomic_") != std::string::npos)
+          parameter.get_base_name().empty())
         {
           parameter.set_identifier(irep_idt());
         }
-        else if(!parameter.get_base_name().empty()) // may be anonymous
+        else
         {
           // produce identifier
           irep_idt identifier =
@@ -192,8 +192,6 @@ void c_typecheck_baset::typecheck_new_symbol(symbolt &symbol)
           symbol.module = module;
 
           move_symbol(parameter_symbol, new_parameter_symbol);
-        } else {
-          parameter.set_identifier(irep_idt());
         }
       }
     }
@@ -424,7 +422,8 @@ void c_typecheck_baset::typecheck_redefinition_non_type(
 
           symbol_tablet::symbolst::const_iterator parameter_symbol_it =
             symbol_table.symbols.find(identifier);
-          if(parameter_symbol_it != symbol_table.symbols.end()) {
+          if(parameter_symbol_it != symbol_table.symbols.end())
+          {
             symbol_table.erase(parameter_symbol_it);
           }
         }
@@ -825,8 +824,6 @@ void c_typecheck_baset::typecheck_declaration(
         parameter_map[CPROVER_PREFIX "return_value"] = ret_type;
       typecheck_spec_expr(static_cast<codet &>(contract), ID_C_spec_ensures);
       parameter_map.clear();
-
-
 
       if(contract.find(ID_C_spec_assigns).is_not_nil())
         new_symbol.type.add(ID_C_spec_assigns) =
