@@ -1775,7 +1775,8 @@ void is_fresh_baset::add_declarations(const std::string &decl_string) {
   for(const auto &symbol_pair : tmp_symbol_table.symbols) {
     if (symbol_pair.first == memmap_name ||
         symbol_pair.first == ensures_fn_name ||
-        symbol_pair.first == requires_fn_name) {
+        symbol_pair.first == requires_fn_name || 
+        symbol_pair.first == "malloc") {
           this->parent.get_symbol_table().insert(symbol_pair.second);
     }
     // Parameters are stored as scoped names in the symbol table.

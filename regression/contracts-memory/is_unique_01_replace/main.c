@@ -22,12 +22,12 @@ static _Bool __foo_memory_map[__CPROVER_constant_infinity_uint];
 
 bool __foo_requires_is_fresh(void **elem, size_t size) {
 	*elem = malloc(size);
-	if (!*elem || (__foo_memory_map[__CPROVER_POINTER_OBJECT*elem)] != 0)) return false;
+	if (!*elem || (__foo_memory_map[__CPROVER_POINTER_OBJECT(*elem)] != 0)) return false;
 
-	__foo_memory_map[__CPROVER_POINTER_OBJECT*elem)] = 1;
+	__foo_memory_map[__CPROVER_POINTER_OBJECT(*elem)] = 1;
 	return true;
 }
-s
+
 bool __foo_ensures_is_fresh(void *elem, size_t size) {
 	bool ok = (__foo_memory_map[__CPROVER_POINTER_OBJECT(elem)] == 0 && 
 		  	   __CPROVER_r_ok(elem, size));
@@ -37,10 +37,10 @@ bool __foo_ensures_is_fresh(void *elem, size_t size) {
 
 
 _Bool __call_foo_requires_is_fresh(void *elem, size_t size) {
-	//_Bool r_ok = __CPROVER_r_ok(elem, size);
-	_Bool mem_map_bad = __foo_memory_map[__CPROVER_POINTER_OBJECT(elem)] == 0; 
+	_Bool r_ok = __CPROVER_r_ok(elem, size);
+	if (!__CPROVER_r_ok(elem, size) || 
+	    __foo_memory_map[__CPROVER_POINTER_OBJECT(elem)]) return 0;
 	__foo_memory_map[__CPROVER_POINTER_OBJECT(elem)] = 1;
-	if (mem_map_bad)  return 0;
 	return 1;
 }
 

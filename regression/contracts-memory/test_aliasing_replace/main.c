@@ -6,10 +6,13 @@
 
 int z;
 
-bool dummy_for_definitions(int *n) {
+void bar(int argument); 
+
+/* dummy_for_definitions(int *n) {
   assert(__CPROVER_is_fresh(&n, sizeof(int)));
   int *x = malloc(sizeof(int));
 }
+*/
 
 int foo(int *x, int *y)
 __CPROVER_assigns(z, *x, *y)
@@ -19,6 +22,7 @@ __CPROVER_ensures(__CPROVER_return_value == *x + 5);
 
 int foo(int *x, int *y)
 {
+  //bar(4);
   *x = *x + 4;
   return *x + 5;
 }
