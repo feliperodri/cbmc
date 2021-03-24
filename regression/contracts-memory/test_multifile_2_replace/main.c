@@ -1,6 +1,6 @@
+#include "foo.h"
 #include <assert.h>
 #include <stdbool.h>
-#include "foo.h"
 
 /*
 bool ptr_ok(int *x) {

@@ -51,12 +51,10 @@ void __CPROVER_printf(const char *format, ...);
 void __CPROVER_input(const char *id, ...);
 void __CPROVER_output(const char *id, ...);
 
-
 // contract-related functions
 __CPROVER_bool __CPROVER_is_fresh(const void *mem, __CPROVER_size_t size);
 __CPROVER_bool __CPROVER_is_writeable(const void *mem);
 __CPROVER_bool __CPROVER_is_freeable(const void *mem);
-
 
 // concurrency-related
 void __CPROVER_atomic_begin();

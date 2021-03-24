@@ -4,18 +4,18 @@ include ../../src/config.inc
 include ../../src/common
 
 ifeq ($(BUILD_ENV_),MSVC)
-	exe=../../../build/bin/goto-cl
+	exe=../../../src/goto-cc/goto-cl
 	is_windows=true
 else
-	exe=../../../build/bin/goto-cc
+	exe=../../../src/goto-cc/goto-cc
 	is_windows=false
 endif
 
 test:
-	@../test.pl -e -p -c '../chain.sh $(exe) ../../../build/bin/goto-instrument ../../../build/bin/cbmc $(is_windows)'
+	@../test.pl -e -p -c '../chain.sh $(exe) ../../../src/goto-instrument/goto-instrument ../../../src/cbmc/cbmc $(is_windows)'
 
 tests.log:
-	@../test.pl -e -p -c '../chain.sh $(exe) ../../../build/bin/goto-instrument ../../../build/bin/cbmc $(is_windows)'
+	@../test.pl -e -p -c '../chain.sh $(exe) ../../../src/goto-instrument/goto-instrument ../../../src/cbmc/cbmc $(is_windows)'
 
 show:
 	@for dir in *; do \

@@ -95,6 +95,8 @@ public:
   symbol_tablet &get_symbol_table();
   goto_functionst &get_goto_functions();
 
+  namespacet ns;
+
 protected:
   symbol_tablet &symbol_table;
   goto_functionst &goto_functions;
@@ -108,7 +110,10 @@ protected:
   bool enforce_contract(const std::string &);
 
   /// Create code corresponding to assertion/assumption
-  void convert_to_goto(const codet &code, const irep_idt &mode, goto_programt &target);
+  void convert_to_goto(
+    const codet &code,
+    const irep_idt &mode,
+    goto_programt &target);
 
   /// Insert assertion statements into the goto program to ensure that
   /// assigned memory is within the assignable memory frame.
@@ -390,11 +395,14 @@ protected:
  *     - Doing replacements for code.
  *
  *******************************************/
-class is_fresh_baset {
+class is_fresh_baset
+{
 public:
-  is_fresh_baset(code_contractst &_parent,
-                 messaget _log,
-                 const irep_idt _fun_id) : parent(_parent), log(_log), fun_id(_fun_id)  {};
+  is_fresh_baset(
+    code_contractst &_parent,
+    messaget _log,
+    const irep_idt _fun_id)
+    : parent(_parent), log(_log), fun_id(_fun_id){};
 
   void update_requires(goto_programt &requires);
   void update_ensures(goto_programt &ensures);
@@ -403,7 +411,10 @@ public:
 
 protected:
   void add_declarations(const std::string &decl_string);
-  void update_fn_call(goto_programt::targett &target, const std::string &name, bool add_address_of);
+  void update_fn_call(
+    goto_programt::targett &target,
+    const std::string &name,
+    bool add_address_of);
 
   virtual void create_requires_fn_call(goto_programt::targett &target) = 0;
   virtual void create_ensures_fn_call(goto_programt::targett &target) = 0;
@@ -416,37 +427,36 @@ protected:
   std::string memmap_name;
   std::string requires_fn_name;
   std::string ensures_fn_name;
-
 };
 
-
-class is_fresh_enforcet : public is_fresh_baset {
+class is_fresh_enforcet : public is_fresh_baset
+{
 public:
-  is_fresh_enforcet(code_contractst &_parent,
-                    messaget _log,
-                    const irep_idt _fun_id);
-
-    virtual void create_declarations();
-
-protected:
-    virtual void create_requires_fn_call(goto_programt::targett &target);
-    virtual void create_ensures_fn_call(goto_programt::targett &target);
-
-};
-
-class is_fresh_replacet : public is_fresh_baset {
-public:
-  is_fresh_replacet(code_contractst &_parent,
-                    messaget _log,
-                    const irep_idt _fun_id);
+  is_fresh_enforcet(
+    code_contractst &_parent,
+    messaget _log,
+    const irep_idt _fun_id);
 
   virtual void create_declarations();
 
 protected:
-    virtual void create_requires_fn_call(goto_programt::targett &target);
-    virtual void create_ensures_fn_call(goto_programt::targett &target);
-
+  virtual void create_requires_fn_call(goto_programt::targett &target);
+  virtual void create_ensures_fn_call(goto_programt::targett &target);
 };
 
+class is_fresh_replacet : public is_fresh_baset
+{
+public:
+  is_fresh_replacet(
+    code_contractst &_parent,
+    messaget _log,
+    const irep_idt _fun_id);
+
+  virtual void create_declarations();
+
+protected:
+  virtual void create_requires_fn_call(goto_programt::targett &target);
+  virtual void create_ensures_fn_call(goto_programt::targett &target);
+};
 
 #endif // CPROVER_GOTO_INSTRUMENT_CODE_CONTRACTS_H
