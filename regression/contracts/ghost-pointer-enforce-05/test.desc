@@ -1,0 +1,13 @@
+CORE
+main.c
+--enforce-all-contracts
+^EXIT=10$
+^SIGNAL=0$
+^VERIFICATION FAILED$
+--
+--
+Verification:
+This test checks that ghost variables are supported in the case where multiple
+variables are being assgned by the function under test. By using the
+--enforce-all-contracts flag, the post-condition (which contains the ghost
+variable) is asserted. In this case, this assertion should fail.

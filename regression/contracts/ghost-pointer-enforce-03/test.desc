@@ -1,0 +1,11 @@
+CORE
+main.c
+--enforce-all-contracts
+^EXIT=10$
+^SIGNAL=0$
+^VERIFICATION FAILED$
+--
+--
+Verification:
+This test checks that ghost variables are not supported for variables that are
+not part of the __CPROVER_assigns statement for the function under test.

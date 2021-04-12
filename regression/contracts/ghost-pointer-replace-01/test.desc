@@ -1,0 +1,13 @@
+CORE
+main.c
+--replace-all-calls-with-contracts
+^EXIT=0$
+^SIGNAL=0$
+^VERIFICATION SUCCESSFUL$
+--
+--
+Verification:
+This test checks that ghost variables are supported with the use of the
+--replace-all-calls-with-contracts flag. In this case, the post-condition
+(which contains the ghost variable) becomes an assumption. We then manually
+assert this assumption. For this test, the assertion should succeed.
