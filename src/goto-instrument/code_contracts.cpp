@@ -1542,11 +1542,31 @@ goto_programt assigns_clauset::havoc_code(
   goto_programt havoc_statements;
   for(assigns_clause_targett *target : targets)
   {
+    //    if(target != NULL) goto x;
+    //      havoc_statements
+    // z: skip
+
+    // create the z label
+    goto_programt tmp_z;
+    goto_programt::targett z = tmp_z.add(goto_programt::make_skip(location));
+
+    // TODO: generalize this
+    // currently only supports pointers
+    exprt condition = equal_exprt(
+      target->get_direct_pointer(),
+      null_pointer_exprt(to_pointer_type(target->get_direct_pointer().type())));
+
+    havoc_statements.add(goto_programt::make_goto(z, condition, location));
+
+    // create havoc_statements
     for(goto_programt::instructiont instruction :
         target->havoc_code(location).instructions)
     {
       havoc_statements.add(std::move(instruction));
     }
+
+    // add the z label instruction
+    havoc_statements.destructive_append(tmp_z);
   }
   return havoc_statements;
 }
@@ -1595,8 +1615,15 @@ exprt assigns_clauset::compatible_expression(
     {
       if(first_iter)
       {
-        current_target_compatible =
-          target->compatible_expression(*called_target);
+        // TODO: generalize this
+        // currently only supports pointers
+        current_target_compatible = or_exprt(
+          equal_exprt(
+            called_target->get_direct_pointer(),
+            null_pointer_exprt(
+              to_pointer_type(called_target->get_direct_pointer().type()))),
+          target->compatible_expression(*called_target));
+
         first_iter = false;
       }
       else

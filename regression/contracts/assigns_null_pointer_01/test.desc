@@ -1,0 +1,13 @@
+CORE
+main.c
+--enforce-contract foo --replace-call-with-contract bar
+^EXIT=0$
+^SIGNAL=0$
+^VERIFICATION SUCCESSFUL$
+--
+--
+Verification:
+This test checks support for a null pointer passed as a parameter to a
+function that may assign to it. The null pointer is passed to function
+bar which has been replaced by it's function contracts, while the calling
+function foo is being checked (by enforcing it's function contracts).
