@@ -14,6 +14,7 @@ Date: February 2016
 #ifndef CPROVER_GOTO_INSTRUMENT_CODE_CONTRACTS_H
 #define CPROVER_GOTO_INSTRUMENT_CODE_CONTRACTS_H
 
+#include <iostream>
 #include <map>
 #include <set>
 #include <string>

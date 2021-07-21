@@ -736,8 +736,22 @@ void code_contractst::instrument_call_statement(
   irep_idt called_name;
   if(call.function().id() == ID_dereference)
   {
-    called_name = to_symbol_expr(to_dereference_expr(call.function()).pointer())
-                    .get_identifier();
+    if(to_dereference_expr(call.function()).pointer().id() == ID_member)
+    {
+      called_name =
+        to_member_expr(to_dereference_expr(call.function()).pointer())
+          .get_component_name();
+    }
+    else
+    {
+      called_name =
+        to_symbol_expr(to_dereference_expr(call.function()).pointer())
+          .get_identifier();
+    }
+    log.error() << "Not enforcing in function pointer " << called_name
+                << messaget::eom;
+    ;
+    called_name = "";
   }
   else
   {
@@ -791,44 +805,47 @@ void code_contractst::instrument_call_statement(
     ++instruction_iterator;
   }
 
-  const symbolt &called_symbol = ns.lookup(called_name);
-  // Called symbol might be a function pointer.
-  const typet &called_symbol_type = (called_symbol.type.id() == ID_pointer)
-                                      ? called_symbol.type.subtype()
-                                      : called_symbol.type;
-  exprt called_assigns =
-    to_code_with_contract_type(called_symbol_type).assigns();
-  const code_typet &called_type = to_code_type(called_symbol_type);
-
-  if(called_assigns.is_not_nil())
+  if(!called_name.empty())
   {
-    replace_symbolt replace_formal_params;
-    auto a_it = call.arguments().begin();
-    for(auto p_it = called_type.parameters().begin();
-        p_it != called_type.parameters().end() &&
-        a_it != call.arguments().end();
-        ++p_it, ++a_it)
-    {
-      if(!p_it->get_identifier().empty())
-      {
-        symbol_exprt p(p_it->get_identifier(), p_it->type());
-        replace_formal_params.insert(p, *a_it);
-      }
-    }
-    replace_formal_params(called_assigns);
+    const symbolt &called_symbol = ns.lookup(called_name);
 
-    // check compatibility of assigns clause with the called function
-    assigns_clauset called_assigns_clause(
-      called_assigns, *this, function_id, log);
-    exprt compatible =
-      assigns_clause.compatible_expression(called_assigns_clause);
-    goto_programt alias_assertion;
-    alias_assertion.add(goto_programt::make_assertion(
-      compatible, instruction_iterator->source_location));
-    alias_assertion.instructions.back().source_location.set_comment(
-      "Check compatibility of assigns clause with the called function");
-    program.insert_before_swap(instruction_iterator, alias_assertion);
-    ++instruction_iterator;
+    const typet &called_symbol_type = (called_symbol.type.id() == ID_pointer)
+                                        ? called_symbol.type.subtype()
+                                        : called_symbol.type;
+    exprt called_assigns =
+      to_code_with_contract_type(called_symbol_type).assigns();
+    const code_typet &called_type = to_code_type(called_symbol_type);
+
+    if(called_assigns.is_not_nil())
+    {
+      replace_symbolt replace_formal_params;
+      auto a_it = call.arguments().begin();
+      for(auto p_it = called_type.parameters().begin();
+          p_it != called_type.parameters().end() &&
+          a_it != call.arguments().end();
+          ++p_it, ++a_it)
+      {
+        if(!p_it->get_identifier().empty())
+        {
+          symbol_exprt p(p_it->get_identifier(), p_it->type());
+          replace_formal_params.insert(p, *a_it);
+        }
+      }
+      replace_formal_params(called_assigns);
+
+      // check compatibility of assigns clause with the called function
+      assigns_clauset called_assigns_clause(
+        called_assigns, *this, function_id, log);
+      exprt compatible =
+        assigns_clause.compatible_expression(called_assigns_clause);
+      goto_programt alias_assertion;
+      alias_assertion.add(goto_programt::make_assertion(
+        compatible, instruction_iterator->source_location));
+      alias_assertion.instructions.back().source_location.set_comment(
+        "Check compatibility of assigns clause with the called function");
+      program.insert_before_swap(instruction_iterator, alias_assertion);
+      ++instruction_iterator;
+    }
   }
 }
 
@@ -851,9 +868,18 @@ bool code_contractst::check_for_looped_mallocs(const goto_programt &program)
       irep_idt called_name;
       if(call.function().id() == ID_dereference)
       {
-        called_name =
-          to_symbol_expr(to_dereference_expr(call.function()).pointer())
-            .get_identifier();
+        if(to_dereference_expr(call.function()).pointer().id() == ID_member)
+        {
+          called_name =
+            to_member_expr(to_dereference_expr(call.function()).pointer())
+              .get_component_name();
+        }
+        else
+        {
+          called_name =
+            to_symbol_expr(to_dereference_expr(call.function()).pointer())
+              .get_identifier();
+        }
       }
       else
       {
