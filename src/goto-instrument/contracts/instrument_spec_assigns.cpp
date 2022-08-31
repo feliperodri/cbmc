@@ -567,6 +567,13 @@ car_exprt instrument_spec_assignst::create_car_expr(
           is_ptr_to_ptr.is_true() ? car_havoc_methodt::NONDET_ASSIGN
                                   : car_havoc_methodt::HAVOC_SLICE};
       }
+      else
+      {
+        log.error().source_location = target.source_location();
+        log.error() << "call to " + id2string(ident) +
+                         " in assigns clauses not supported in "
+                         "this version";
+      }
     }
   }
   else if(is_assignable(target))

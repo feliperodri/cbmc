@@ -852,6 +852,38 @@ void c_typecheck_baset::typecheck_declaration(
 
       typecheck_symbol(symbol);
 
+      auto check_history_expr =
+        [&](const exprt expr, std::string &clause_type) {
+          disallow_subexpr_by_id(
+            expr,
+            ID_old,
+            CPROVER_PREFIX "old is not allowed in " + clause_type + ".");
+          disallow_subexpr_by_id(
+            expr,
+            ID_loop_entry,
+            CPROVER_PREFIX "loop_entry is not allowed in " + clause_type + ".");
+        };
+
+      auto check_return_value =
+        [&](const exprt &expr, std::string &clause_type) {
+          const irep_idt id = CPROVER_PREFIX "return_value";
+
+          auto pred = [&](const exprt &expr) {
+            if(!can_cast_expr<symbol_exprt>(expr))
+              return false;
+
+            return to_symbol_expr(expr).get_identifier() == id;
+          };
+
+          if(!has_subexpr(expr, pred))
+            return;
+
+          error().source_location = expr.source_location();
+          error() << id2string(id) + " is not allowed in " << clause_type << "."
+                  << eom;
+          throw 0;
+        };
+
       // check the contract, if any
       symbolt &new_symbol = symbol_table.get_writeable_ref(identifier);
       if(
@@ -894,13 +926,24 @@ void c_typecheck_baset::typecheck_declaration(
             parameter_identifier, p.type());
         }
 
+        for(auto &expr : code_type.requires_contract())
+        {
+          typecheck_spec_function_pointer_obeys_contract(expr);
+          std::string clause_type = "function pointer preconditions";
+          check_history_expr(expr, clause_type);
+          check_return_value(expr, clause_type);
+          lambda_exprt lambda{temporary_parameter_symbols, expr};
+          lambda.add_source_location() = expr.source_location();
+          expr.swap(lambda);
+        }
+
         for(auto &requires : code_type.requires())
         {
           typecheck_expr(requires);
           implicit_typecast_bool(requires);
           std::string clause_type = "preconditions";
-          check_history_expr_return_value(requires, clause_type);
-          check_was_freed(requires, clause_type);
+          check_history_expr(requires, clause_type);
+          check_return_value(requires, clause_type);
           lambda_exprt lambda{temporary_parameter_symbols, requires};
           lambda.add_source_location() = requires.source_location();
           requires.swap(lambda);
@@ -910,7 +953,8 @@ void c_typecheck_baset::typecheck_declaration(
         for(auto &assigns : code_type.assigns())
         {
           std::string clause_type = "assigns clauses";
-          check_history_expr_return_value(assigns, clause_type);
+          check_history_expr(assigns, clause_type);
+          check_return_value(assigns, clause_type);
           lambda_exprt lambda{temporary_parameter_symbols, assigns};
           lambda.add_source_location() = assigns.source_location();
           assigns.swap(lambda);

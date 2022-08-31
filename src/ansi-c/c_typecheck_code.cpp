@@ -881,6 +881,25 @@ void c_typecheck_baset::throw_on_side_effects(const exprt &expr)
   }
 }
 
+void c_typecheck_baset::throw_on_side_effects(const exprt &expr)
+{
+  if(has_subexpr(expr, ID_side_effect))
+  {
+    std::ostringstream error_message;
+    error_message << "side-effects not allowed in assigns clause targets";
+    throw invalid_source_file_exceptiont{
+      error_message.str(), expr.source_location()};
+  }
+  if(has_subexpr(expr, ID_if))
+  {
+    std::ostringstream error_message;
+    error_message << "ternary expressions not allowed in assigns "
+                     "clause targets";
+    throw invalid_source_file_exceptiont{
+      error_message.str(), expr.source_location()};
+  }
+}
+
 void c_typecheck_baset::typecheck_spec_condition(exprt &condition)
 {
   // compute type
@@ -933,16 +952,18 @@ void c_typecheck_baset::typecheck_conditional_targets(
   const std::function<void(exprt &)> typecheck_target,
   const std::string &clause_type)
 {
-  exprt::operandst new_targets;
+  exprt::operandst tmp;
+  bool must_throw = false;
 
   for(auto &target : targets)
   {
     if(!can_cast_expr<conditional_target_group_exprt>(target))
     {
-      throw invalid_source_file_exceptiont{
-        "expected a conditional target group expression in " + clause_type +
-          "clause, found " + id2string(target.id()),
-        target.source_location()};
+      must_throw = true;
+      error().source_location = target.source_location();
+      error() << "expected ID_conditional_target_group expression in " +
+                   clause_type + "clause, found "
+              << id2string(target.id()) << eom;
     }
 
     auto &conditional_target_group = to_conditional_target_group_expr(target);
@@ -959,7 +980,7 @@ void c_typecheck_baset::typecheck_conditional_targets(
       for(auto &actual_target : conditional_target_group.targets())
       {
         typecheck_target(actual_target);
-        new_targets.push_back(actual_target);
+        tmp.push_back(actual_target);
       }
     }
     else
@@ -969,16 +990,20 @@ void c_typecheck_baset::typecheck_conditional_targets(
       {
         typecheck_target(actual_target);
       }
-      new_targets.push_back(std::move(target));
+      tmp.push_back(std::move(target));
     }
   }
+
+  // at least one target was not as expected
+  if(must_throw)
+    throw 0;
 
   // now each target is either:
   // - a simple side-effect-free unconditional lvalue expression or
   // - a conditional target group expression with a non-trivial condition
 
   // update original vector in-place
-  std::swap(targets, new_targets);
+  std::swap(targets, tmp);
 }
 
 void c_typecheck_baset::typecheck_spec_assigns(exprt::operandst &targets)
@@ -987,14 +1012,6 @@ void c_typecheck_baset::typecheck_spec_assigns(exprt::operandst &targets)
     typecheck_spec_assigns_target(target);
   };
   typecheck_conditional_targets(targets, typecheck_target, "assigns");
-}
-
-void c_typecheck_baset::typecheck_spec_frees(exprt::operandst &targets)
-{
-  const std::function<void(exprt &)> typecheck_target = [&](exprt &target) {
-    typecheck_spec_frees_target(target);
-  };
-  typecheck_conditional_targets(targets, typecheck_target, "frees");
 }
 
 void c_typecheck_baset::typecheck_spec_assigns_target(exprt &target)
@@ -1006,9 +1023,11 @@ void c_typecheck_baset::typecheck_spec_assigns_target(exprt &target)
   {
     if(target.type().id() == ID_empty)
     {
+      std::ostringstream error_message;
+      error_message
+        << "lvalue expressions with void type not allowed in assigns clauses";
       throw invalid_source_file_exceptiont{
-        "lvalue expressions with void type not allowed in assigns clauses",
-        target.source_location()};
+        error_message.str(), target.source_location()};
     }
     throw_on_side_effects(target);
     return;
@@ -1023,32 +1042,39 @@ void c_typecheck_baset::typecheck_spec_assigns_target(exprt &target)
     const auto &funcall = to_side_effect_expr_function_call(target);
     if(!can_cast_expr<symbol_exprt>(funcall.function()))
     {
-      throw invalid_source_file_exceptiont(
-        "function pointer calls not allowed in assigns clauses",
-        target.source_location());
+      const auto &ident = to_symbol_expr(funcall.function()).get_identifier();
+      if(
+        ident == CPROVER_PREFIX "assignable" ||
+        ident == CPROVER_PREFIX "object_whole" ||
+        ident == CPROVER_PREFIX "object_upto" ||
+        ident == CPROVER_PREFIX "object_from")
+      {
+        for(const auto &argument : funcall.arguments())
+          throw_on_side_effects(argument);
+        return;
+      }
     }
 
     if(target.type().id() != ID_empty)
     {
-      throw invalid_source_file_exceptiont(
-        "expecting void return type for function '" +
-          id2string(to_symbol_expr(funcall.function()).get_identifier()) +
-          "' called in assigns clause",
-        target.source_location());
+      std::ostringstream error_message;
+      error_message << "function pointer calls not allowed in assigns clauses";
+      throw invalid_source_file_exceptiont{
+        error_message.str(), target.source_location()};
     }
 
     for(const auto &argument : funcall.arguments())
       throw_on_side_effects(argument);
   }
-  else
-  {
-    // if we reach this point the target did not pass the checks
-    throw invalid_source_file_exceptiont(
-      "assigns clause target must be a non-void lvalue, a call "
-      "to " CPROVER_PREFIX
-      "POINTER_OBJECT or a call to a function returning void",
-      target.source_location());
-  }
+  // if we reach this point the target did not pass the checks
+  std::ostringstream error_message;
+  error_message
+    << "assigns clause target must be a non-void lvalue or a call to one of "
+    << CPROVER_PREFIX "POINTER_OBJECT, " << CPROVER_PREFIX "assignable, "
+    << CPROVER_PREFIX "object_whole, " << CPROVER_PREFIX "object_upto, "
+    << CPROVER_PREFIX "object_from";
+  throw invalid_source_file_exceptiont{
+    error_message.str(), target.source_location()};
 }
 
 void c_typecheck_baset::typecheck_spec_frees_target(exprt &target)
@@ -1064,35 +1090,12 @@ void c_typecheck_baset::typecheck_spec_frees_target(exprt &target)
   }
   else if(can_cast_expr<side_effect_expr_function_callt>(target))
   {
-    // A call to a void function symbol without other side effects
-    const auto &funcall = to_side_effect_expr_function_call(target);
-
-    if(!can_cast_expr<symbol_exprt>(funcall.function()))
-    {
-      throw invalid_source_file_exceptiont(
-        "function pointer calls not allowed in frees clauses",
-        target.source_location());
-    }
-
-    if(type.id() != ID_empty)
-    {
-      throw invalid_source_file_exceptiont(
-        "expecting void return type for function '" +
-          id2string(to_symbol_expr(funcall.function()).get_identifier()) +
-          "' called in frees clause",
-        target.source_location());
-    }
-
-    for(const auto &argument : funcall.arguments())
-      throw_on_side_effects(argument);
-  }
-  else
-  {
-    // anything else is rejected
-    throw invalid_source_file_exceptiont(
-      "frees clause target must be a pointer-typed expression or a call to a "
-      "function returning void",
-      target.source_location());
+    error().source_location = target.source_location();
+    error() << "the first and second parameter of the "
+               "requires_contract/ensures_contract clause must have the same "
+               "function pointer type "
+            << eom;
+    throw 0;
   }
 }
 

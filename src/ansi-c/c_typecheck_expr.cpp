@@ -2070,7 +2070,52 @@ void c_typecheck_baset::typecheck_side_effect_function_call(
       // Is it the polymorphic typed_target function ?
       if(identifier == CPROVER_PREFIX "typed_target")
       {
-        typecheck_typed_target_call(expr);
+        if(expr.arguments().size() != 1)
+        {
+          std::ostringstream error_message;
+          error_message << "expected 1 argument for "
+                        << CPROVER_PREFIX "typed_target"
+                        << " found " << expr.arguments().size();
+          throw invalid_source_file_exceptiont{
+            error_message.str(), expr.source_location()};
+        }
+
+        auto arg0 = expr.arguments().at(0);
+        typecheck_expr(arg0);
+        if(!is_assignable(arg0) || !arg0.get_bool(ID_C_lvalue))
+        {
+          std::ostringstream error_message;
+          error_message << "argument of " << CPROVER_PREFIX "typed_target"
+                        << "must be assignable";
+          throw invalid_source_file_exceptiont{
+            error_message.str(), arg0.source_location()};
+        }
+        const auto &size = size_of_expr(arg0.type(), *this);
+        if(!size.has_value())
+        {
+          std::ostringstream error_message;
+          error_message << "sizeof not defined for argument of "
+                        << CPROVER_PREFIX "typed_target"
+                        << " of type " << to_string(arg0.type());
+          throw invalid_source_file_exceptiont{
+            error_message.str(), arg0.source_location()};
+        }
+
+        // rewrite call to "assignable"
+        to_symbol_expr(f_op).set_identifier(CPROVER_PREFIX "assignable");
+        exprt::operandst arguments;
+        // pointer
+        arguments.push_back(address_of_exprt(arg0));
+        // size
+        arguments.push_back(size.value());
+        // is_pointer
+        if(arg0.type().id() == ID_pointer)
+          arguments.push_back(true_exprt());
+        else
+          arguments.push_back(false_exprt());
+
+        expr.arguments().swap(arguments);
+        typecheck_side_effect_function_call(expr);
       }
       // Is this a builtin?
       else if(!builtin_factory(identifier, symbol_table, get_message_handler()))
