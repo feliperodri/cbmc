@@ -63,7 +63,7 @@ public:
   /// \param dest The destination goto program to append the instructions to
   void append_full_havoc_code(
     const source_locationt location,
-    goto_programt &dest) const;
+    goto_programt &dest);
 
   /// \brief Append goto instructions to havoc a single expression `expr`
   ///
@@ -79,7 +79,7 @@ public:
   virtual void append_havoc_code_for_expr(
     const source_locationt location,
     const exprt &expr,
-    goto_programt &dest) const;
+    goto_programt &dest);
 
   /// \brief Append goto instructions to havoc the underlying object of `expr`
   ///
