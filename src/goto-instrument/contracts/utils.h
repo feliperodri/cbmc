@@ -11,16 +11,46 @@ Date: September 2021
 #ifndef CPROVER_GOTO_INSTRUMENT_CONTRACTS_UTILS_H
 #define CPROVER_GOTO_INSTRUMENT_CONTRACTS_UTILS_H
 
-#include <vector>
-
-#include <goto-instrument/havoc_utils.h>
-
 #include <goto-programs/goto_convert_class.h>
 
-#define IN_BASE_CASE "__in_base_case"
-#define ENTERED_LOOP "__entered_loop"
-#define IN_LOOP_HAVOC_BLOCK "__in_loop_havoc_block"
-#define INIT_INVARIANT "__init_invariant"
+#include <util/byte_operators.h>
+#include <util/expr_cast.h>
+#include <util/message.h>
+
+#include <goto-programs/goto_model.h>
+
+#include <analyses/dirty.h>
+#include <analyses/locals.h>
+#include <goto-instrument/havoc_utils.h>
+
+#include <vector>
+
+/// Class that allows to clean expressions of side effects and to generate
+/// havoc_slice expressions.
+class cleanert : public goto_convertt
+{
+public:
+  cleanert(
+    symbol_table_baset &_symbol_table,
+    message_handlert &_message_handler)
+    : goto_convertt(_symbol_table, _message_handler)
+  {
+  }
+
+  void clean(exprt &guard, goto_programt &dest, const irep_idt &mode)
+  {
+    goto_convertt::clean_expr(guard, dest, mode, true);
+  }
+
+  void do_havoc_slice(
+    const symbol_exprt &function,
+    const exprt::operandst &arguments,
+    goto_programt &dest,
+    const irep_idt &mode)
+  {
+    goto_convertt::do_havoc_slice(nil_exprt{}, function, arguments, dest, mode);
+  }
+};
 
 /// \brief A class that overrides the low-level havocing functions in the base
 ///        utility class, to havoc only when expressions point to valid memory,
