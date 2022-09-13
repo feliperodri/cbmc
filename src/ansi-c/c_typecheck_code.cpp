@@ -1032,11 +1032,6 @@ void c_typecheck_baset::typecheck_spec_assigns_target(exprt &target)
     throw_on_side_effects(target);
     return;
   }
-  else if(target.id() == ID_pointer_object)
-  {
-    throw_on_side_effects(target);
-    return;
-  }
   else if(can_cast_expr<side_effect_expr_function_callt>(target))
   {
     const auto &funcall = to_side_effect_expr_function_call(target);
@@ -1070,9 +1065,8 @@ void c_typecheck_baset::typecheck_spec_assigns_target(exprt &target)
   std::ostringstream error_message;
   error_message
     << "assigns clause target must be a non-void lvalue or a call to one of "
-    << CPROVER_PREFIX "POINTER_OBJECT, " << CPROVER_PREFIX "assignable, "
-    << CPROVER_PREFIX "object_whole, " << CPROVER_PREFIX "object_upto, "
-    << CPROVER_PREFIX "object_from";
+    << CPROVER_PREFIX "assignable, " << CPROVER_PREFIX "object_whole, "
+    << CPROVER_PREFIX "object_upto, " << CPROVER_PREFIX "object_from";
   throw invalid_source_file_exceptiont{
     error_message.str(), target.source_location()};
 }

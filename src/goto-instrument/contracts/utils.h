@@ -82,15 +82,39 @@ protected:
 class havoc_assigns_targetst : public havoc_if_validt
 {
 public:
-  havoc_assigns_targetst(const assignst &mod, const namespacet &ns)
-    : havoc_if_validt(mod, ns)
+  havoc_assigns_targetst(
+    const assignst &mod,
+    symbol_tablet &st,
+    message_handlert &message_handler,
+    const irep_idt &mode)
+    : havoc_if_validt(mod, ns),
+      ns(st),
+      cleaner(st, message_handler),
+      log(message_handler),
+      mode(mode)
   {
   }
+
+  void append_havoc_pointer_code(
+    const source_locationt location,
+    const exprt &ptr_to_ptr,
+    goto_programt &dest);
+
+  void append_havoc_slice_code(
+    const source_locationt location,
+    const exprt &ptr,
+    const exprt &size,
+    goto_programt &dest);
 
   void append_havoc_code_for_expr(
     const source_locationt location,
     const exprt &expr,
-    goto_programt &dest) const override;
+    goto_programt &dest);
+
+  namespacet ns;
+  cleanert cleaner;
+  messaget log;
+  const irep_idt &mode;
 };
 
 /// \brief Generate a validity check over all dereferences in an expression
