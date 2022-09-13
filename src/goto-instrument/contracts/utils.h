@@ -168,32 +168,6 @@ bool is_loop_free(
   namespacet &ns,
   messaget &log);
 
-/// Allows to clean expressions of side effects.
-class cleanert : public goto_convertt
-{
-public:
-  cleanert(
-    symbol_table_baset &_symbol_table,
-    message_handlert &_message_handler)
-    : goto_convertt(_symbol_table, _message_handler)
-  {
-  }
-
-  void clean(exprt &guard, goto_programt &dest, const irep_idt &mode)
-  {
-    goto_convertt::clean_expr(guard, dest, mode, true);
-  }
-
-  void do_havoc_slice(
-    const symbol_exprt &function,
-    const exprt::operandst &arguments,
-    goto_programt &dest,
-    const irep_idt &mode)
-  {
-    goto_convertt::do_havoc_slice(nil_exprt{}, function, arguments, dest, mode);
-  }
-};
-
 /// Returns an \ref irep_idt that essentially says that
 /// `target` was assigned by the contract of `function_id`.
 irep_idt make_assigns_clause_replacement_tracking_comment(
