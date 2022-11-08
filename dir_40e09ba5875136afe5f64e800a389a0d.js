@@ -11,11 +11,6 @@ var dir_40e09ba5875136afe5f64e800a389a0d =
     ] ],
     [ "c_safety_checks.cpp", "c__safety__checks_8cpp.html", "c__safety__checks_8cpp" ],
     [ "c_safety_checks.h", "c__safety__checks_8h.html", "c__safety__checks_8h" ],
-    [ "console.cpp", "console_8cpp.html", "console_8cpp" ],
-    [ "console.h", "console_8h.html", [
-      [ "consolet", "classconsolet.html", "classconsolet" ],
-      [ "redirectt", "classconsolet_1_1redirectt.html", "classconsolet_1_1redirectt" ]
-    ] ],
     [ "counterexample_found.cpp", "counterexample__found_8cpp.html", "counterexample__found_8cpp" ],
     [ "counterexample_found.h", "counterexample__found_8h.html", "counterexample__found_8h" ],
     [ "cprover_main.cpp", "cprover__main_8cpp.html", "cprover__main_8cpp" ],
@@ -35,8 +30,10 @@ var dir_40e09ba5875136afe5f64e800a389a0d =
     [ "format_hooks.h", "format__hooks_8h.html", "format__hooks_8h" ],
     [ "free_symbols.cpp", "free__symbols_8cpp.html", "free__symbols_8cpp" ],
     [ "free_symbols.h", "free__symbols_8h.html", "free__symbols_8h" ],
-    [ "help_formatter.cpp", "help__formatter_8cpp.html", null ],
-    [ "help_formatter.h", "help__formatter_8h.html", "help__formatter_8h" ],
+    [ "generalization.cpp", "generalization_8cpp.html", "generalization_8cpp" ],
+    [ "generalization.h", "generalization_8h.html", "generalization_8h" ],
+    [ "inductiveness.cpp", "inductiveness_8cpp.html", "inductiveness_8cpp" ],
+    [ "inductiveness.h", "inductiveness_8h.html", "inductiveness_8h" ],
     [ "instrument_contracts.cpp", "instrument__contracts_8cpp.html", "instrument__contracts_8cpp" ],
     [ "instrument_contracts.h", "instrument__contracts_8h.html", "instrument__contracts_8h" ],
     [ "instrument_given_invariants.cpp", "instrument__given__invariants_8cpp.html", "instrument__given__invariants_8cpp" ],
@@ -57,6 +54,11 @@ var dir_40e09ba5875136afe5f64e800a389a0d =
     [ "simplify_state_expr.h", "simplify__state__expr_8h.html", "simplify__state__expr_8h" ],
     [ "solver.cpp", "solver_8cpp.html", "solver_8cpp" ],
     [ "solver.h", "solver_8h.html", "solver_8h" ],
+    [ "solver_progress.cpp", "solver__progress_8cpp.html", null ],
+    [ "solver_progress.h", "solver__progress_8h.html", [
+      [ "solver_progresst", "classsolver__progresst.html", "classsolver__progresst" ]
+    ] ],
+    [ "solver_types.cpp", "solver__types_8cpp.html", "solver__types_8cpp" ],
     [ "solver_types.h", "solver__types_8h.html", "solver__types_8h" ],
     [ "state.cpp", "state_8cpp.html", null ],
     [ "state.h", "state_8h.html", "state_8h" ],

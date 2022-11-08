@@ -1,6 +1,4 @@
 <map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
-<area shape="rect" id="node1" href="$classinvariant__failedt.html" title="A logic error, augmented with a distinguished field to hold a backtrace." alt="" coords="5,64,135,91"/>
-<area shape="rect" id="node2" href="$classbad__cast__exceptiont.html" title=" " alt="" coords="203,5,359,32"/>
-<area shape="rect" id="node3" href="$classinvariant__with__diagnostics__failedt.html" title="A class that includes diagnostic information related to an invariant violation." alt="" coords="183,57,379,98"/>
-<area shape="rect" id="node4" href="$classnullptr__exceptiont.html" title=" " alt="" coords="211,123,351,149"/>
+<area shape="rect" id="node1" href="$classinstrument__spec__assignst.html" title="A class that generates instrumentation for assigns clause checking." alt="" coords="5,13,196,39"/>
+<area shape="rect" id="node2" href="$classhavoc__assigns__clause__targetst.html" title="Class to generate havocking instructions for target expressions of a function contract&#39;s assign claus..." alt="" coords="244,5,411,47"/>
 </map>
