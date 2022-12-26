@@ -926,17 +926,6 @@ void c_typecheck_baset::typecheck_declaration(
             parameter_identifier, p.type());
         }
 
-        for(auto &expr : code_type.requires_contract())
-        {
-          typecheck_spec_function_pointer_obeys_contract(expr);
-          std::string clause_type = "function pointer preconditions";
-          check_history_expr(expr, clause_type);
-          check_return_value(expr, clause_type);
-          lambda_exprt lambda{temporary_parameter_symbols, expr};
-          lambda.add_source_location() = expr.source_location();
-          expr.swap(lambda);
-        }
-
         for(auto &requires : code_type.requires())
         {
           typecheck_expr(requires);

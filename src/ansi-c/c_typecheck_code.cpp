@@ -869,22 +869,6 @@ void c_typecheck_baset::throw_on_side_effects(const exprt &expr)
 {
   if(has_subexpr(expr, ID_side_effect))
   {
-    throw invalid_source_file_exceptiont{
-      "side-effects not allowed in assigns clause targets",
-      expr.source_location()};
-  }
-  if(has_subexpr(expr, ID_if))
-  {
-    throw invalid_source_file_exceptiont{
-      "ternary expressions not allowed in assigns clause targets",
-      expr.source_location()};
-  }
-}
-
-void c_typecheck_baset::throw_on_side_effects(const exprt &expr)
-{
-  if(has_subexpr(expr, ID_side_effect))
-  {
     std::ostringstream error_message;
     error_message << "side-effects not allowed in assigns clause targets";
     throw invalid_source_file_exceptiont{
