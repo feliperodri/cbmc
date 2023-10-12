@@ -2,8 +2,8 @@ var classc__typecheck__baset =
 [
     [ "asm_label_mapt", "classc__typecheck__baset.html#a3a4a94c4009f64191c1691b2a37be351", null ],
     [ "id_type_mapt", "classc__typecheck__baset.html#a9fa3e8aaf7e8818e99123473d1c74a1b", null ],
-    [ "c_typecheck_baset", "classc__typecheck__baset.html#a29449735abfbadb26b9309c877f4e849", null ],
-    [ "c_typecheck_baset", "classc__typecheck__baset.html#ada436ad818bae7e3793d1c5f88100ce0", null ],
+    [ "c_typecheck_baset", "classc__typecheck__baset.html#aefbfcff5bd183d58c75aafa2f2a4c7bc", null ],
+    [ "c_typecheck_baset", "classc__typecheck__baset.html#a9067f2aa227012e7d6b03904cf352b9d", null ],
     [ "~c_typecheck_baset", "classc__typecheck__baset.html#ab5c7391987f273d829eeea2a8bcf3605", null ],
     [ "add_parameters_to_symbol_table", "classc__typecheck__baset.html#aa77666a3a6a991c9d2cc7b2b263b310c", null ],
     [ "add_rounding_mode", "classc__typecheck__baset.html#a6ea297bd7d8b527ad156aa9792e724f3", null ],
@@ -43,7 +43,7 @@ var classc__typecheck__baset =
     [ "to_string", "classc__typecheck__baset.html#a70827109ec6b951e2f018c84a80c77c8", null ],
     [ "to_string", "classc__typecheck__baset.html#ae19e7962f9fc341fab87ab6a2a0c3e4d", null ],
     [ "typecheck", "classc__typecheck__baset.html#a222776d21ec42b835d6570518f50fa01", null ],
-    [ "typecheck_arithmetic_pointer", "classc__typecheck__baset.html#ae7bb9cdfe3dcfbe9abeb03012439e373", null ],
+    [ "typecheck_arithmetic_pointer", "classc__typecheck__baset.html#ad6a096e7e2590ffaffe0e1453e75ca4b", null ],
     [ "typecheck_array_type", "classc__typecheck__baset.html#ae4fee3896dd7ee4f9b02b6d89f6eb987", null ],
     [ "typecheck_asm", "classc__typecheck__baset.html#a8c84b26c51b0fccec893fb20ab8e729f", null ],
     [ "typecheck_assign", "classc__typecheck__baset.html#a5891607cb3ee77da42a90130eac6f49c", null ],
@@ -103,10 +103,12 @@ var classc__typecheck__baset =
     [ "typecheck_ifthenelse", "classc__typecheck__baset.html#ae44620e236211240d7a38f5a26e869c8", null ],
     [ "typecheck_label", "classc__typecheck__baset.html#af194451d38a395585fc9211b6c87b505", null ],
     [ "typecheck_new_symbol", "classc__typecheck__baset.html#a7ca4b062cbdffe4a26a402e51f2a5a1c", null ],
+    [ "typecheck_obeys_contract_call", "classc__typecheck__baset.html#a0061ebd6a33cec69bfa4084206e51712", null ],
     [ "typecheck_redefinition_non_type", "classc__typecheck__baset.html#ab5c5253b198bd31002d4a0e2da2ed232", null ],
     [ "typecheck_redefinition_type", "classc__typecheck__baset.html#a9494a5a762403351895cf7f4575fd250", null ],
     [ "typecheck_return", "classc__typecheck__baset.html#ac4d09dccea3853a3508fbb91768e0d87", null ],
     [ "typecheck_saturating_arithmetic", "classc__typecheck__baset.html#a5d90a13fc93f2969400d0408c6155c1c", null ],
+    [ "typecheck_shadow_memory_builtin", "classc__typecheck__baset.html#a38f6ef20ccc785ada88cacb85c3f48b7", null ],
     [ "typecheck_shuffle_vector", "classc__typecheck__baset.html#adf8a223fccdeea28143f61c40b3974dd", null ],
     [ "typecheck_side_effect_assignment", "classc__typecheck__baset.html#a91219791e4959d8509ce1bf8d6242c38", null ],
     [ "typecheck_side_effect_function_call", "classc__typecheck__baset.html#a6b3541c253e8f700479c161c77709d58", null ],
@@ -118,7 +120,6 @@ var classc__typecheck__baset =
     [ "typecheck_spec_decreases", "classc__typecheck__baset.html#a51a642f44848bf4df93ac5b7674ba82a", null ],
     [ "typecheck_spec_frees", "classc__typecheck__baset.html#abc59dc2e25b62da265c89238619349b2", null ],
     [ "typecheck_spec_frees_target", "classc__typecheck__baset.html#a6e044732c3e87ac9be83bb3e4da18806", null ],
-    [ "typecheck_spec_function_pointer_obeys_contract", "classc__typecheck__baset.html#a5421a8eb88a64e7821f9c58737c75cb6", null ],
     [ "typecheck_spec_loop_invariant", "classc__typecheck__baset.html#ac8eeabced3b6bbfd4e60d1fb1c35401a", null ],
     [ "typecheck_start_thread", "classc__typecheck__baset.html#ac7abd88a8e81956eb51c0361ace40370", null ],
     [ "typecheck_switch", "classc__typecheck__baset.html#aa1add23573af2a68fbef8904dd65e158", null ],
@@ -143,5 +144,5 @@ var classc__typecheck__baset =
     [ "parameter_map", "classc__typecheck__baset.html#accbaaf3a695fe1898c5383a914d03eb3", null ],
     [ "return_type", "classc__typecheck__baset.html#a7ed5a4cec398652e0469d58fc7df602b", null ],
     [ "switch_op_type", "classc__typecheck__baset.html#a3e095569ca0609beebddc6910b74c0cb", null ],
-    [ "symbol_table", "classc__typecheck__baset.html#a5e0def01ec86e0ab8554a096bbd7522a", null ]
+    [ "symbol_table", "classc__typecheck__baset.html#a0273b8ffdb8ccf954007fc5e2df40d3b", null ]
 ];

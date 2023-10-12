@@ -23,6 +23,7 @@ var dfcc__library_8h =
       [ "WRITE_SET_INSERT_OBJECT_UPTO", "dfcc__library_8h.html#a97b83fb2b0fd27b4146627b468ceb57ca01410b6a220ee7197045ed52c3e1eb84", null ],
       [ "WRITE_SET_ADD_FREEABLE", "dfcc__library_8h.html#a97b83fb2b0fd27b4146627b468ceb57cac2f123da3706a017744c12aa71959518", null ],
       [ "WRITE_SET_ADD_ALLOCATED", "dfcc__library_8h.html#a97b83fb2b0fd27b4146627b468ceb57caf21cb0c6e198fd825fb3387c1cabebab", null ],
+      [ "WRITE_SET_ADD_DECL", "dfcc__library_8h.html#a97b83fb2b0fd27b4146627b468ceb57cac65197bde8cdde615ee8ffd35f7e2a99", null ],
       [ "WRITE_SET_RECORD_DEAD", "dfcc__library_8h.html#a97b83fb2b0fd27b4146627b468ceb57ca7e32cadcda141707c435857783ed667b", null ],
       [ "WRITE_SET_RECORD_DEALLOCATED", "dfcc__library_8h.html#a97b83fb2b0fd27b4146627b468ceb57cad0260d6e47eee44521ac968dc93f4d55", null ],
       [ "WRITE_SET_CHECK_ALLOCATED_DEALLOCATED_IS_EMPTY", "dfcc__library_8h.html#a97b83fb2b0fd27b4146627b468ceb57ca7633fc0610e0d10ad1f706213077236c", null ],
@@ -42,9 +43,11 @@ var dfcc__library_8h =
       [ "LINK_ALLOCATED", "dfcc__library_8h.html#a97b83fb2b0fd27b4146627b468ceb57cac2032fb582d7cd029f268f995eb8a298", null ],
       [ "LINK_DEALLOCATED", "dfcc__library_8h.html#a97b83fb2b0fd27b4146627b468ceb57ca4f1c276440e066c96db9d064173243ae", null ],
       [ "IS_FRESH", "dfcc__library_8h.html#a97b83fb2b0fd27b4146627b468ceb57cacf027dd86cc7b624d490bff9f5d0cd9d", null ],
+      [ "POINTER_IN_RANGE_DFCC", "dfcc__library_8h.html#a97b83fb2b0fd27b4146627b468ceb57ca2920c74fa9cac391e894d2aef1f63623", null ],
       [ "IS_FREEABLE", "dfcc__library_8h.html#a97b83fb2b0fd27b4146627b468ceb57ca0a6f938522ddc6da8229dc6b80359227", null ],
       [ "WAS_FREED", "dfcc__library_8h.html#a97b83fb2b0fd27b4146627b468ceb57caa6004cea15b69066e7618db63f29573a", null ],
-      [ "REPLACE_ENSURES_WAS_FREED_PRECONDITIONS", "dfcc__library_8h.html#a97b83fb2b0fd27b4146627b468ceb57cac543dc0cf23dc7e8304f3c59c73b6b03", null ]
+      [ "REPLACE_ENSURES_WAS_FREED_PRECONDITIONS", "dfcc__library_8h.html#a97b83fb2b0fd27b4146627b468ceb57cac543dc0cf23dc7e8304f3c59c73b6b03", null ],
+      [ "OBEYS_CONTRACT", "dfcc__library_8h.html#a97b83fb2b0fd27b4146627b468ceb57ca687f59c7b0a624c3d6d40636656c99e9", null ]
     ] ],
     [ "dfcc_typet", "dfcc__library_8h.html#afa825bddfe01a78991bfae7f91471a52", [
       [ "CAR", "dfcc__library_8h.html#afa825bddfe01a78991bfae7f91471a52aedc860e2d30b3a5c8823c026e7a79e03", null ],

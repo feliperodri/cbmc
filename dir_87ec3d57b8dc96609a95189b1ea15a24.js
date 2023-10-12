@@ -1,6 +1,7 @@
 var dir_87ec3d57b8dc96609a95189b1ea15a24 =
 [
     [ "ast", "dir_944fd70a76fefe8830c07ff136e57176.html", "dir_944fd70a76fefe8830c07ff136e57176" ],
+    [ "encoding", "dir_395f14ef3e680ed8090b4e0c95aba18d.html", "dir_395f14ef3e680ed8090b4e0c95aba18d" ],
     [ "theories", "dir_9be549c1edc716e2e65d6df6db882e7e.html", "dir_9be549c1edc716e2e65d6df6db882e7e" ],
     [ "construct_value_expr_from_smt.cpp", "construct__value__expr__from__smt_8cpp.html", "construct__value__expr__from__smt_8cpp" ],
     [ "construct_value_expr_from_smt.h", "construct__value__expr__from__smt_8h.html", "construct__value__expr__from__smt_8h" ],
@@ -15,6 +16,10 @@ var dir_87ec3d57b8dc96609a95189b1ea15a24 =
     [ "smt2_incremental_decision_procedure.h", "smt2__incremental__decision__procedure_8h.html", [
       [ "smt2_incremental_decision_proceduret", "classsmt2__incremental__decision__proceduret.html", "classsmt2__incremental__decision__proceduret" ],
       [ "sequencet", "classsmt2__incremental__decision__proceduret_1_1sequencet.html", "classsmt2__incremental__decision__proceduret_1_1sequencet" ]
+    ] ],
+    [ "smt_is_dynamic_object.cpp", "smt__is__dynamic__object_8cpp.html", "smt__is__dynamic__object_8cpp" ],
+    [ "smt_is_dynamic_object.h", "smt__is__dynamic__object_8h.html", [
+      [ "smt_is_dynamic_objectt", "structsmt__is__dynamic__objectt.html", "structsmt__is__dynamic__objectt" ]
     ] ],
     [ "smt_object_size.cpp", "smt__object__size_8cpp.html", "smt__object__size_8cpp" ],
     [ "smt_object_size.h", "smt__object__size_8h.html", [

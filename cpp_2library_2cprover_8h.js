@@ -6,8 +6,8 @@ var cpp_2library_2cprover_8h =
     [ "__CPROVER_array_set", "cpp_2library_2cprover_8h.html#a7538533178ffec70735c16a41d73c5b1", null ],
     [ "__CPROVER_assert", "cpp_2library_2cprover_8h.html#a564e8a5a7bebea04fdd5ee1277832478", null ],
     [ "__CPROVER_assume", "cpp_2library_2cprover_8h.html#af3b1cdd4eebcd47d6900a5ab3a0dcc59", null ],
-    [ "__CPROVER_atomic_begin", "cpp_2library_2cprover_8h.html#a72788665280ec93229f00d719f0154d2", null ],
-    [ "__CPROVER_atomic_end", "cpp_2library_2cprover_8h.html#a25834baa2dad8149e94c7c9c4f54e31a", null ],
+    [ "__CPROVER_atomic_begin", "cpp_2library_2cprover_8h.html#ac83662d53791aab1a7eedb2ca51f47a3", null ],
+    [ "__CPROVER_atomic_end", "cpp_2library_2cprover_8h.html#adc1184102118656768eef846a978d2ec", null ],
     [ "__CPROVER_cleanup", "cpp_2library_2cprover_8h.html#ab225b76de97f8c1285f90de0aa6a9cbd", null ],
     [ "__CPROVER_clear_may", "cpp_2library_2cprover_8h.html#ab68cefc67493c2be314fedf2a977cac5", null ],
     [ "__CPROVER_clear_must", "cpp_2library_2cprover_8h.html#a44c52f81f27a73479a3aa122f2e04fc8", null ],
@@ -25,7 +25,5 @@ var cpp_2library_2cprover_8h =
     [ "__CPROVER_set_must", "cpp_2library_2cprover_8h.html#ad3a2aedad97977b64290f8141eed690c", null ],
     [ "__typeof__", "cpp_2library_2cprover_8h.html#a294a033f64010c023e5d38a93d5cea65", null ],
     [ "__CPROVER_deallocated", "cpp_2library_2cprover_8h.html#a62443eebddd4033552d58dcf25c77c8f", null ],
-    [ "__CPROVER_malloc_is_new_array", "cpp_2library_2cprover_8h.html#a8f13eeb1228cc90ef3abe89d1235db93", null ],
-    [ "__CPROVER_memory_leak", "cpp_2library_2cprover_8h.html#aa558c53640fe7cc910b049da86d9a9f2", null ],
-    [ "__CPROVER_new_object", "cpp_2library_2cprover_8h.html#a69b79506a08d1d49d8ce8b043d0cd720", null ]
+    [ "__CPROVER_memory_leak", "cpp_2library_2cprover_8h.html#aa558c53640fe7cc910b049da86d9a9f2", null ]
 ];
