@@ -192,7 +192,10 @@
 <dd><p>Enable memory cleanup checks: assert that all dynamically allocated memory is explicitly freed before terminating the program.</p>
 </dd>
 <dt><strong>--div-by-zero-check</strong></dt>
-<dd><p>enable division by zero checks</p>
+<dd><p>enable division by zero checks for integer division</p>
+</dd>
+<dt><strong>--float-div-by-zero-check</strong></dt>
+<dd><p>enable division by zero checks for floating-point division</p>
 </dd>
 <dt><strong>--signed-overflow-check</strong></dt>
 <dd><p>enable signed arithmetic over- and underflow checks</p>
@@ -513,6 +516,9 @@ int main(void) {
 <dt><strong>--malloc-fail-null</strong></dt>
 <dd><p>set malloc failure mode to return null</p>
 </dd>
+<dt><strong>--no-malloc-may-fail</strong></dt>
+<dd><p>do not allow malloc calls to fail by default</p>
+</dd>
 <dt><strong>--string-abstraction</strong></dt>
 <dd><p>track C string lengths and zero-termination</p>
 </dd>
@@ -631,8 +637,11 @@ void call(fptr_t fptr) {
 <dt><strong>--partial-loops</strong></dt>
 <dd><p>permit paths with partial loops</p>
 </dd>
+<dt><strong>--no-unwinding-assertions</strong></dt>
+<dd><p>do not generate unwinding assertions</p>
+</dd>
 <dt><strong>--unwinding-assertions</strong></dt>
-<dd><p>generate unwinding assertions</p>
+<dd><p>generate unwinding assertions (enabled by default; overrides <strong>--no-unwinding-assertions</strong> when both of these are given)</p>
 </dd>
 <dt><strong>--continue-as-loops</strong></dt>
 <dd><p>add loop for remaining iterations after unwound part</p>
@@ -758,7 +767,10 @@ void call(fptr_t fptr) {
 <h2>Code contracts:</h2>
 <dl>
 <dt><strong>--apply-loop-contracts</strong></dt>
-<dd><p>check and use loop contracts when provided</p>
+<dd>
+</dd>
+<dt><strong>-disable-loop-contracts-side-effect-check</strong></dt>
+<dd><p>UNSOUND OPTION. Disable checking the absence of side effects in loop contract clauses. In absence of such checking, loop contracts clauses will accept more expressions, such as pure functions and statement expressions. But user have to make sure the loop contracts are side-effect free by them self to get a sound result.</p>
 </dd>
 <dt><strong>-loop-contracts-no-unwind</strong></dt>
 <dd><p>do not unwind transformed loops</p>
