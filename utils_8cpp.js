@@ -1,10 +1,9 @@
 var utils_8cpp =
 [
-    [ "add_quantified_variable", "utils_8cpp.html#a294e2a465538cef6fe58910023492ac3", null ],
     [ "all_dereferences_are_valid", "utils_8cpp.html#a593dcf3d2c7f0c9332afe812cc5ec689", null ],
     [ "annotate_assigns", "utils_8cpp.html#a3efc5ac13d2416bd72f7f3199f6e546d", null ],
-    [ "annotate_assigns", "utils_8cpp.html#aaeb6c0147c7354441c41b25a535e008a", null ],
-    [ "annotate_decreases", "utils_8cpp.html#a683eff99f435909b5f1e4545a2ced17e", null ],
+    [ "annotate_assigns", "utils_8cpp.html#a5eecfacf3d66c9c76a916c8600f8dc68", null ],
+    [ "annotate_decreases", "utils_8cpp.html#a5d6d0a86e45d57067dd4fe993f9486a2", null ],
     [ "annotate_invariants", "utils_8cpp.html#aab60371e081d74195d69c087bb3b9543", null ],
     [ "append_safe_havoc_code_for_expr", "utils_8cpp.html#a1eaf14a5ee9f44eaa5d598bfcc709261", null ],
     [ "extract_loop_assigns", "utils_8cpp.html#a81de6ed0803cdac4eb940763eda2aa43", null ],
@@ -26,14 +25,14 @@ var utils_8cpp =
     [ "insert_before_swap_and_advance", "utils_8cpp.html#a7d81c043b086199641b0e686cdd27234", null ],
     [ "is_assignment_to_instrumented_variable", "utils_8cpp.html#a11be635da37bb659aab648c67bc8c6ca", null ],
     [ "is_assigns_clause_replacement_tracking_comment", "utils_8cpp.html#a5da8544cddc0cac684c91b55b4d2ab4f", null ],
-    [ "is_loop_free", "utils_8cpp.html#a3813c832f1bc8415bed3d3f17d14b763", null ],
+    [ "is_loop_free", "utils_8cpp.html#a347ede8327e2002d1bfa8e5133d11a27", null ],
     [ "is_transformed_loop_end", "utils_8cpp.html#a9d1167acb38516d35006111efc44f571", null ],
     [ "is_transformed_loop_head", "utils_8cpp.html#a523e10f9b5ded98f00cc8c5e85cf1a6a", null ],
     [ "make_assigns_clause_replacement_tracking_comment", "utils_8cpp.html#a1c73b0b817e6e049ea409d0c86e7b3e3", null ],
     [ "replace_history_loop_entry", "utils_8cpp.html#a44f41852b68d69b70a2b10550742f2a4", null ],
     [ "replace_history_old", "utils_8cpp.html#a0b931288a19e60b91ac791eb53cbf9a1", null ],
     [ "replace_history_parameter_rec", "utils_8cpp.html#ab75372a13c4ed5ecb45844a43b600244", null ],
-    [ "simplify_gotos", "utils_8cpp.html#aba81cb53e8d0082cbe68db4136188024", null ],
+    [ "simplify_gotos", "utils_8cpp.html#a90cb59d025201658c14ea7cb25f17d35", null ],
     [ "widen_assigns", "utils_8cpp.html#a8ec8b1b695a472d1ee3ffc455fb07995", null ],
     [ "ASSIGNS_CLAUSE_REPLACEMENT_TRACKING", "utils_8cpp.html#abe4637b56094bf90d6b488cbf4b6de92", null ]
 ];
