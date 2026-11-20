@@ -9,7 +9,11 @@ var string_8c =
     [ "__builtin___strcpy_chk", "string_8c.html#a0e27e25146a2ca46fca6344cf23a691b", null ],
     [ "__builtin___strncat_chk", "string_8c.html#a73f464dfdc458d7dd7917bb76e92c450", null ],
     [ "__builtin___strncpy_chk", "string_8c.html#a5b825d2243259b660b7063894c24c93c", null ],
+    [ "__builtin_char_memchr", "string_8c.html#a63d1e17b46aca16f7993cbd8b22591b1", null ],
+    [ "__builtin_memcpy", "string_8c.html#adb1839a7f60866dd4e69892ecba145ac", null ],
+    [ "__builtin_memmove", "string_8c.html#a3a2b0da4f36111bcf154735fc6d935ae", null ],
     [ "__builtin_memset", "string_8c.html#a8f46f0b565b5d2c69bf06cab0e6f1078", null ],
+    [ "memchr", "string_8c.html#a0a3e4af1b88f5d51a32fe7dcbf753b38", null ],
     [ "memcmp", "string_8c.html#a9e6df54ee04e18a3772335580e2ed872", null ],
     [ "memcpy", "string_8c.html#ab15dd0a01835f878ce6d2420374f9914", null ],
     [ "memmove", "string_8c.html#a340d11725e5c81a874f508fbcdf1c5ef", null ],
@@ -26,5 +30,7 @@ var string_8c =
     [ "strncat", "string_8c.html#af81ab894ffe6a312661e5a18c9b74cdd", null ],
     [ "strncmp", "string_8c.html#a07f4a84c11c106e95c32b6ab509346ef", null ],
     [ "strncpy", "string_8c.html#a82f08f2390a9067f3c94b638e90e03bd", null ],
-    [ "strrchr", "string_8c.html#a74bb83b922ff0d4f4267b8b47af45e2b", null ]
+    [ "strpbrk", "string_8c.html#a58ec382a0a44be34a859ea51769c58ae", null ],
+    [ "strrchr", "string_8c.html#a74bb83b922ff0d4f4267b8b47af45e2b", null ],
+    [ "strstr", "string_8c.html#ab57319b670052e4c93c1f6822c28d5ce", null ]
 ];

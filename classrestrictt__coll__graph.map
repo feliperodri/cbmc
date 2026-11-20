@@ -1,0 +1,11 @@
+<map id="restrictt" name="restrictt">
+<area shape="rect" id="Node000001" title=" " alt="" coords="47,324,120,352"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,207,162,251"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="86,265,86,325,81,323,81,268"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="17,106,150,134"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="84,147,86,206,81,206,83,152"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="30,5,68,33"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="46,46,53,81,70,105,65,106,48,83,46,51"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="99,5,137,33"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="108,50,91,106,86,104,109,45"/>
+</map>

@@ -1,8 +1,8 @@
 var classsmt2__convt =
 [
-    [ "identifiert", "structsmt2__convt_1_1identifiert.html", "structsmt2__convt_1_1identifiert" ],
     [ "smt2_symbolt", "classsmt2__convt_1_1smt2__symbolt.html", "classsmt2__convt_1_1smt2__symbolt" ],
-    [ "converterst", "classsmt2__convt.html#aff82c99690982bbc6184f2d969e2aadb", null ],
+    [ "identifiert", "structsmt2__convt_1_1identifiert.html", "structsmt2__convt_1_1identifiert" ],
+    [ "converterst", "classsmt2__convt.html#a59ec4e1b75b0fc74a859b0783ab3e8b2", null ],
     [ "datatype_mapt", "classsmt2__convt.html#a190818aa2d53d1f389a8918bec2a7eca", null ],
     [ "defined_expressionst", "classsmt2__convt.html#a093d1ac0542892aae00307690f6cf727", null ],
     [ "identifier_mapt", "classsmt2__convt.html#a4911f0d922e7ce401be6f593d9dac355", null ],
@@ -58,6 +58,8 @@ var classsmt2__convt =
     [ "convert_update_bit", "classsmt2__convt.html#a6db62fbf4aea81335e22f433acedc6db", null ],
     [ "convert_update_bits", "classsmt2__convt.html#ad38fd63c1704e1247c80a41c9bedea4d", null ],
     [ "convert_with", "classsmt2__convt.html#aaff22045e19cd027407a320a893c90b0", null ],
+    [ "datatype_selector_name", "classsmt2__convt.html#acc20ecd77e1a7584842fa1c9ac9f624a", null ],
+    [ "datatype_update_name", "classsmt2__convt.html#aa6dcecb323d5f5e83dece023a3a35ed6", null ],
     [ "dec_solve", "classsmt2__convt.html#a29223dc8875131d6b5cf1202a9ef7764", null ],
     [ "decision_procedure_text", "classsmt2__convt.html#a7d693c703cc7921c1a885e538f809ac3", null ],
     [ "define_object_size", "classsmt2__convt.html#a83458c9188b4d6e02d32dd33ad12cbb4", null ],
